@@ -56,8 +56,9 @@ class config(parser):
         self.output |= {self.out_path / "config" / f"{k}.h": template.render(v)
                         for k, v
                         in self.table.items()}
-
-        # commandline arguments
-        template = self.env.get_template("cli.h.in")
-        self.output[self.out_path /
-                    "cli.h"] = template.render({"settings": self.table})
+        
+        if not self.no_cli:
+            # commandline arguments
+            template = self.env.get_template("cli.h.in")
+            self.output[self.out_path /
+                        "cli.h"] = template.render({"settings": self.table})

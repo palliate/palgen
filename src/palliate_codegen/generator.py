@@ -6,6 +6,8 @@ from palliate_codegen.log import logger
 
 class generator:
     def __init__(self, config, out_path):
+        self.whitelist = []
+        self.no_cli = False
         self.out_path = Path(out_path).resolve().absolute() / "generated"
         self.modules = {}
         try:
@@ -32,10 +34,17 @@ class generator:
         logger.debug(f"Collecting from {self.folders}")
         logger.debug(f"Root folder: {self.root_path}")
 
+        if "tables" in conf and isinstance(conf["tables"], list):
+            self.whitelist = conf["tables"]
+
+        # TODO figure out a better solution
+        if "no_cli" in conf:
+            self.no_cli = conf["no_cli"]
+
     def _load(self, module):
         module_m = importlib.import_module(f'palliate_codegen.tables.{module}')
         self.modules[module] = getattr(module_m, module)(
-            self.root_path, self.out_path)
+            self.root_path, self.out_path, self.no_cli)
 
     def collect(self):
         # accumulate paths to all config files
@@ -48,6 +57,11 @@ class generator:
             logger.debug("Found config at %s" %
                          config.relative_to(self.root_path))
             for module, attributes in toml.load(config).items():
+
+                if self.whitelist and module not in self.whitelist:
+                    logger.info(f"Skipping table {module}")
+                    continue
+
                 if module not in self.modules:
                     self._load(module)
 

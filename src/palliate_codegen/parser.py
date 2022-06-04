@@ -15,7 +15,8 @@ class parser:
                       keep_trailing_newline=True
                       )
 
-    def __init__(self, root_path, out_path):
+    def __init__(self, root_path, out_path, no_cli=False):
+        self.no_cli = no_cli
         self.root_path = Path(root_path)
         self.out_path = Path(out_path)
         self.table = {}

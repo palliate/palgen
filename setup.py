@@ -2,8 +2,7 @@
 import setuptools
 from pathlib import Path
 
-root_path = Path(__file__).parent.absolute()
-with open(root_path / "README.md", "r", encoding="utf-8") as fh:
+with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
