@@ -1,0 +1,47 @@
+#pragma once
+#include <unordered_map>
+#include <map>
+#include <optional>
+#include <string_view>
+
+namespace config {
+using namespace std::string_view_literals;
+struct cli_option {
+  std::string_view table;
+  std::optional<char const> shorthand;
+  std::string_view description = ""sv;
+};
+
+static const std::map<char, std::string_view> cli_shorthands = {
+  $%- for key, value in settings.items() %$
+  $%- if value.settings|has_cli %$
+  $%- for setting in value.settings %$
+  $%- if setting.shorthand %$
+  {'${ setting.shorthand }$', "${ setting.name }$"},
+  $%- endif %$
+  $%- endfor %$
+  $%- endif %$
+  $%- endfor %$
+};
+
+static const std::unordered_map<std::string_view, cli_option> cli_map = {
+  $%- for key, value in settings.items() %$
+  $%- if value.settings|has_cli %$
+
+  $%- for setting in value.settings %$
+    {"${ setting.name }$",
+     {
+         .table = "${ key }$"sv,
+      $%- if setting.shorthand %$
+         .shorthand = '${ setting.shorthand }$',
+      $%- endif %$
+      $%- if setting.comment %$
+         .description = R"""(${ setting.comment }$)"""sv,
+      $%- endif %$
+     }},
+  $%- endfor %$
+
+  $%- endif %$
+  $%- endfor %$
+};
+}  // namespace config
