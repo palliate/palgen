@@ -6,6 +6,8 @@ setuptools.setup(
     author="Tsche",
     author_email="contact@palliate.io",
     description="Code generation utility",
+    long_description="Code generation utility",
+    long_description_content_type="text/markdown",
     url="https://github.com/palliate/codegen",
     project_urls={
         "Bug Tracker": "https://github.com/palliate/codegen/issues",
