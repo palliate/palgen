@@ -7,7 +7,8 @@
 namespace config {
 using namespace std::string_view_literals;
 struct cli_option {
-  std::string_view table;
+  std::string_view key;
+  std::string_view path;
   std::optional<char const> shorthand;
   std::string_view description = ""sv;
 };
@@ -29,9 +30,10 @@ static const std::unordered_map<std::string_view, cli_option> cli_map = {
   $%- if value.settings|has_cli %$
 
   $%- for setting in value.settings %$
-    {"${ setting.name }$",
+    {"${ setting.command or setting.name }$",
      {
-         .table = "${ key }$"sv,
+         .key = "${ setting.name }$"sv,
+         .path = "${ setting.parent or value.parent or '' }$${ key }$"sv,
       $%- if setting.shorthand %$
          .shorthand = '${ setting.shorthand }$',
       $%- endif %$

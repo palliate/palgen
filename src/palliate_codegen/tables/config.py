@@ -19,6 +19,10 @@ class config(parser):
             if "settings" not in v:
                 raise KeyError(f"Config {k} doesn't declare any settings.")
 
+            if "parent" in v:
+                if not v["parent"].endswith('.'):
+                    v["parent"] += '.'
+
             v["name"] = k
             for field in v["settings"]:
                 missing_keys = required_keys - field.keys()
@@ -37,10 +41,18 @@ class config(parser):
                                 f"Duplicate shorthand: {field['shorthand']}")
                         cli_shorthands.add(field["shorthand"])
 
-                    if field["name"] in cli:
-                        raise KeyError(
-                            f"Duplicate cli argument: {field['name']}")
-                    cli.add(field["name"])
+                    command = field["name"]
+                    if "command" in field:
+                        if field["command"] in cli:
+                            raise KeyError(f"Duplicate cli argument: {field['command']}")
+                        command = field["command"]
+                    elif field["name"] in cli:
+                        raise KeyError(f"Duplicate cli argument: {field['name']}")
+                    cli.add(command)
+
+                if "parent" in field:
+                    if not field["parent"].endswith('.'):
+                        field["parent"] += '.'
 
                 if "default" not in field:
                     continue
@@ -56,7 +68,7 @@ class config(parser):
         self.output |= {self.out_path / "config" / f"{k}.h": template.render(v)
                         for k, v
                         in self.table.items()}
-        
+
         if not self.no_cli:
             # commandline arguments
             template = self.env.get_template("cli.h.in")
