@@ -46,8 +46,9 @@ struct ${ name }$ {
     return table;
   }
 
-  static constexpr char const* name(){
-    return "${ name }$";
+  static auto const name(){
+    static auto const n = "${ name }$";
+    return n;
   }
 };
 }  // namespace config

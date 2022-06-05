@@ -54,13 +54,9 @@ class config(parser):
                     if not field["parent"].endswith('.'):
                         field["parent"] += '.'
 
-                if "default" not in field:
-                    continue
-                field["default"] = self.fix_value(field["default"])
+                if "default" in field:
+                    field["default"] = self.fix_value(field["default"])
 
-            # make sure smybol names are unique
-            if len(v["settings"]) != len(set(field["name"] for field in v["settings"])):
-                raise ValueError(f"Key collision within {k}")
 
     def render(self):
         # config files

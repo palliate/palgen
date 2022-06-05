@@ -58,8 +58,12 @@ class parser:
                                 if "name" in v}
 
     def fix_value(self, value) -> str:
+        #TODO refactor this mess
+
         if type(value) is str:
             return f'"{value}"'
+        elif type(value) is int:
+            return str(value)
         elif type(value) is bool:
             return str(value).lower()
         elif type(value) is float:
