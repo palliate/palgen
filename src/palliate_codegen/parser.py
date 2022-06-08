@@ -58,18 +58,14 @@ class parser:
                                 if "name" in v}
 
     def fix_value(self, value) -> str:
-        #TODO refactor this mess
-
         if type(value) is str:
             return f'"{value}"'
-        elif type(value) is int:
-            return str(value)
         elif type(value) is bool:
             return str(value).lower()
-        elif type(value) is float:
-            return str(value)
         elif type(value) is list:
             if len(value) > 1:
                 raise ValueError(
                     "Raw default list contained more than one item")
             return value[0]
+
+        return str(value)

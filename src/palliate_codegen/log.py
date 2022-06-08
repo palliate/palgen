@@ -1,4 +1,5 @@
 import logging
+import sys
 
 
 class LogFormatter(logging.Formatter):
@@ -33,7 +34,7 @@ def set_min_level(level):
 logger = logging.getLogger('codegen')
 logger.setLevel(logging.INFO)
 
-ch = logging.StreamHandler()
+ch = logging.StreamHandler(sys.stdout)
 ch.setLevel(logging.DEBUG)
 ch.setFormatter(LogFormatter())
 logger.addHandler(ch)

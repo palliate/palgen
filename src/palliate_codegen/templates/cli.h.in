@@ -18,7 +18,7 @@ static const std::map<char, std::string_view> cli_shorthands = {
   $%- if value.settings|has_cli %$
   $%- for setting in value.settings %$
   $%- if setting.shorthand %$
-  {'${ setting.shorthand }$', "${ setting.name }$"},
+  {'${ setting.shorthand }$', "${ setting.command or setting.name }$"},
   $%- endif %$
   $%- endfor %$
   $%- endif %$
