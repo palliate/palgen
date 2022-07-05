@@ -14,7 +14,7 @@ class resource(parser):
         path /= resource['path']
         return path.resolve().absolute()
 
-    def validate(self):
+    def prepare(self):
         for name, resource in self.table.items():
             if 'path' not in resource:
                 raise KeyError(f"Resource {name} does not specify a path.")

@@ -14,7 +14,7 @@ struct cli_option {
 };
 
 static const std::map<char, std::string_view> cli_shorthands = {
-  $%- for key, value in settings.items() %$
+  $%- for value in settings %$
   $%- if value.settings|has_cli %$
   $%- for setting in value.settings %$
   $%- if setting.shorthand %$
@@ -26,14 +26,15 @@ static const std::map<char, std::string_view> cli_shorthands = {
 };
 
 static const std::unordered_map<std::string_view, cli_option> cli_map = {
-  $%- for key, value in settings.items() %$
+  $%- for value in settings %$
   $%- if value.settings|has_cli %$
 
   $%- for setting in value.settings %$
+    $%- if setting.cli -%$
     {"${ setting.command or setting.name }$",
      {
          .key = "${ setting.name }$"sv,
-         .path = "${ setting.parent or value.parent or '' }$${ key }$"sv,
+         .path = "${ setting.parent or value.parent or '' }$${ value.name|lower }$"sv,
       $%- if setting.shorthand %$
          .shorthand = '${ setting.shorthand }$',
       $%- endif %$
@@ -41,6 +42,7 @@ static const std::unordered_map<std::string_view, cli_option> cli_map = {
          .description = R"""(${ setting.comment }$)"""sv,
       $%- endif %$
      }},
+    $%- endif-%$
   $%- endfor %$
 
   $%- endif %$

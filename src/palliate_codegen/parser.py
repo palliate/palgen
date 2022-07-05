@@ -23,7 +23,7 @@ class parser:
         self.source_map = {}
         self.output = {}
 
-    def validate(self):
+    def prepare(self):
         raise NotImplementedError
 
     def render(self):

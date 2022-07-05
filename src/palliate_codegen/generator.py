@@ -19,11 +19,10 @@ class generator:
     def _parse_config(self, config):
         conf = toml.load(config)
         if "folders" not in conf:
-            logger.error("Configuration invalid: Missing folders list")
+            raise RuntimeError("Configuration invalid: Missing folders list")
             return
         if not isinstance(conf["folders"], list):
-            logger.error("Configuration invalid: folders isn't a list")
-            return
+            raise RuntimeError("Configuration invalid: folders isn't a list")
 
         self.root_path = Path(config).parent
         if "root" in conf and isinstance(conf["root"], str):
@@ -71,11 +70,11 @@ class generator:
 
     def parse(self):
         for name, module in self.modules.items():
-            logger.info(f"Validating {name}")
+            logger.info(f"Preparing {name}")
             try:
-                module.validate()
+                module.prepare()
             except Exception as e:
-                logger.error(f"Validating failed: {e}")
+                logger.error(f"Preparation failed: {e}")
                 raise SystemExit("Failed.")
 
             logger.info(f"Rendering {name}")

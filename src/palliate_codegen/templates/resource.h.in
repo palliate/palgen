@@ -4,7 +4,7 @@
 namespace config {
 namespace resource {
   $%- for resource in resources %$
-  static constexpr uint8_t ${ resource.name }$[] = {
+  static constexpr unsigned char ${ resource.name }$[] = {
       ${ resource.data }$
   };
   $% endfor %$

@@ -10,25 +10,32 @@ class config(parser):
     def has_cli(settings):
         return any([field["cli"] for field in settings if "cli" in field])
 
-    def validate(self):
+    def prepare(self):
         required_keys = set(['name', 'type'])
         cli = set()
         cli_shorthands = set()
 
-        for k, v in self.table.items():
+        for v in self.table:
+            if "name" not in v:
+                raise KeyError("Config doesn't have a name")
+
             if "settings" not in v:
-                raise KeyError(f"Config {k} doesn't declare any settings.")
+                raise KeyError(f"Config {v['name']} doesn't declare any settings.")
+            v["outpath"] = self.path_for(v)
+            #TODO check for collisions
 
             if "parent" in v:
                 if not v["parent"].endswith('.'):
                     v["parent"] += '.'
+            else:
+                if "namespace" in v:
+                    v["parent"] = '.'.join(v["namespace"].split("::")) + '.'
 
-            v["name"] = k
             for field in v["settings"]:
                 missing_keys = required_keys - field.keys()
                 if len(missing_keys):
                     raise KeyError("%s is missing the following keys %s" % (
-                                   f"Setting {k}.{field['name']}" if 'name' in field else f"A setting within {k}",
+                                   f"Setting {v['name']}.{field['name']}" if 'name' in field else f"A setting within {v['name']}",
                                    missing_keys))
 
                 if "save" not in field:
@@ -57,16 +64,22 @@ class config(parser):
                 if "default" in field:
                     field["default"] = self.fix_value(field["default"])
 
+    def path_for(self, table):
+        path = self.out_path
+        if "namespace" in table:
+            for namespace in table["namespace"].split("::"):
+                path /= namespace.lower()
+
+        return path / "config" / f"{table['name'].lower()}.h"
 
     def render(self):
         # config files
         template = self.env.get_template("config.h.in")
-        self.output |= {self.out_path / "config" / f"{k}.h": template.render(v)
-                        for k, v
-                        in self.table.items()}
+        self.output |= {v['outpath']: template.render(v)
+                        for v
+                        in self.table}
 
         if not self.no_cli:
             # commandline arguments
             template = self.env.get_template("cli.h.in")
-            self.output[self.out_path /
-                        "cli.h"] = template.render({"settings": self.table})
+            self.output[self.out_path / "cli.h"] = template.render({"settings": self.table})

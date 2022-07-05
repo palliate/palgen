@@ -33,7 +33,7 @@ class build(parser):
 
         return ret
 
-    def validate(self):
+    def prepare(self):
         required_keys = set(['version', 'type'])
         allowed_types = set(['application', 'library', 'plugin'])
         application = False

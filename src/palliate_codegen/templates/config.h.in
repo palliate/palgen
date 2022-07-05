@@ -4,6 +4,9 @@ $%- for include in requires %$
 #include <${ include }$>
 $%- endfor %$
 
+$%- if namespace is string %$
+namespace ${ namespace }$ {
+$%- endif %$
 namespace config {
 using toml_value = toml::basic_value<toml::preserve_comments>;
 
@@ -47,8 +50,11 @@ struct ${ name }$ {
   }
 
   static auto const name(){
-    static auto const n = "${ name }$";
+    static auto constexpr n = "${ factory_name or name }$";
     return n;
   }
 };
 }  // namespace config
+$%- if namespace is string %$
+}  // namespace ${ namespace }$
+$%- endif %$
