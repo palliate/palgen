@@ -4,7 +4,11 @@
 namespace config {
 namespace resource {
   $%- for resource in resources %$
-  static constexpr unsigned char ${ resource.name }$[] = {
+  static constexpr $% if resource.text -%$
+    char
+  $%- else -%$
+    uint8_t
+  $%- endif %$ ${ resource.name }$[] = {
       ${ resource.data }$
   };
   $% endfor %$

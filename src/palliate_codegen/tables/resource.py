@@ -43,7 +43,9 @@ class resource(parser):
                         data += f"\n{' ' * indent}"
 
                     data += tmp
-            mapping.append({"name": name, "data": data})
+            mapping.append({"name": name,
+                            "text": resource["text"] if "text" in resource else False,
+                            "data": data})
 
         self.output[self.out_path /
                     "resource.h"] = template.render({"resources": mapping})
