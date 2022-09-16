@@ -1,0 +1,60 @@
+#pragma once
+#include <toml11/toml.hpp>
+$%- for include in requires %$
+#include <${ include }$>
+$%- endfor %$
+
+$%- if namespace is string %$
+namespace ${ namespace }$ {
+$%- endif %$
+namespace config {
+using toml_value = toml::basic_value<toml::preserve_comments>;
+
+struct ${ name }$ {
+  $%- for setting in settings %$
+    ${ setting.type }$ ${ setting.name }$$%- if setting.default %$ = ${ setting.default }$$% endif %$;
+  $%- endfor %$
+
+  void from_toml(const toml::value& v) {
+    $% for setting in settings -%$
+    ${ setting.name }$ = $% if setting.default -%$
+    toml::find_or<${ setting.type }$>(v, "${- setting.name -}$", ${ setting.default -}$);
+    $%- else -%$
+    toml::find<${ setting.type }$>(v, "${- setting.name -}$");
+    $%- endif %$
+    $% endfor %$
+  }
+
+  toml_value into_toml() const {
+    $%- for setting in settings %$
+    $%- if setting.save%$
+    toml_value _${- setting.name -}$ (${- setting.name -}$);
+    $%- if setting.comment %$
+    _${- setting.name -}$.comments().push_back(R"""(${ setting.comment }$)""");
+    $%- endif -%$
+    $% endif %$
+    $%- endfor %$
+
+    toml_value table{
+      $%- for setting in settings %$
+      $%- if setting.save %$
+      {"${ setting.name }$", _${- setting.name -}$ },
+      $%- endif %$
+      $%- endfor %$
+    };
+
+    $%- if comment %$
+    table.comments().push_back(R"""(${- comment -}$)""");
+    $%- endif %$
+    return table;
+  }
+
+  static auto const name(){
+    static auto constexpr n = "${ factory_name or name }$";
+    return n;
+  }
+};
+}  // namespace config
+$%- if namespace is string %$
+}  // namespace ${ namespace }$
+$%- endif %$

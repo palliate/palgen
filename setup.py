@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import setuptools
 
 setuptools.setup(
@@ -17,5 +18,14 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    packages=[],
+    include_package_data=True,
+    package_dir={"": "src"},
+    packages=setuptools.find_packages(where="src"),
+    python_requires=">=3.6",
+    install_requires=["jinja2", "click", "colorama", "toml"],
+    entry_points={
+        'console_scripts': [
+            'palgen=palgen:main'
+        ]
+    }
 )
