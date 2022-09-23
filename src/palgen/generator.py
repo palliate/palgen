@@ -4,69 +4,46 @@ from pathlib import Path
 from palgen.log import logger
 from palgen.project import Project
 
+from typing import Optional
+
+import importlib.util
+
 
 class Generator:
-    def __init__(self, config, out_path, modules):
-        self.out_path = Path(out_path).resolve().absolute()
-        self.modules = {}
-
+    def __init__(self, config, out_path: str | Path = None, modules: Optional[list] = None):
         try:
-            self.project = Project(config, out_path)
+            self.project = Project(config)
         except Exception as e:
             logger.error(
                 f"Could not parse project config. {type(e).__name__}: {e}")
-            raise SystemExit("Failed.")
+            raise SystemExit(1)
 
-        if len(modules) > 0:
-            for module in modules:
-                setting = {}
-                if module in self.project.tables \
-                        and isinstance(self.project.tables[module], dict):
-                    setting = self.project.tables[module]
-
-                if "enabled" in setting:
-                    setting["enabled"] = True
-
-                self._load(module, setting)
+        if not out_path:
+            self.out_path = self.project.root
         else:
-            for key, setting in self.project.tables.items():
-                if not isinstance(setting, dict):
-                    continue
-                if "enabled" in setting and not setting["enabled"]:
-                    continue
+            self.out_path = Path(out_path).resolve().absolute()
 
-                self._load(key, setting)
+        # TODO handle enable module overrides
 
-        if "build" in self.modules:
-            self.modules["build"].ingest(self.project, Path(config), self.project)
-
-        logger.debug(f"Enabled modules: {list(self.modules.keys())}")
+        logger.info(f"Loaded templates: {list(self.project.loaded())}")
         logger.debug(f"Collecting from {self.project.folders}")
         logger.debug(f"Root folder: {self.project.root}")
-
-    def _load(self, table, settings):
-        module = importlib.import_module(
-            f'palgen.tables.{table}.{table}')
-        self.modules[table] = getattr(module,
-                                      table.capitalize())(
-            self.project.root,
-            settings)
 
     def collect(self):
         for folder in self.project.folders:
             projects = {}
 
-            for project in [*Path.glob(self.project.root, folder + '/**/project.toml')]:
+            for project in [*Path.glob(self.project.root, folder + '/**/palgen.toml')]:
                 logger.debug(
                     f"Found another project at {project.relative_to(self.project.root)}")
 
                 p = Project(project, self.out_path)
                 projects[project] = p
-                if 'build' in self.modules:
-                    self.modules['build'].ingest(p, project, p)
+                # TODO
 
             for config in [*Path.glob(self.project.root, folder + '/**/config.toml')]:
-                logger.debug(f"Found config at {config.relative_to(self.project.root)}")
+                logger.debug(
+                    f"Found config at {config.relative_to(self.project.root)}")
 
                 project = self.project
                 for path, value in projects.items():
@@ -74,29 +51,36 @@ class Generator:
                         project = value
 
                 for module, attributes in toml.load(config).items():
-                    if module not in self.modules:
+                    if module not in self.project:
                         continue
 
-                    if not self.modules[module].ingestable:
+                    if not self.project[module].ingestable:
                         logger.warning(f"Found data to ingest at {config} but "
-                                    f"module {type(self).__name__} does not expect input.")
+                                       f"module {type(self).__name__} does not expect input.")
                         continue
 
-                    self.modules[module].ingest(attributes, config, project)
+                    self.project[module].ingest(attributes, config, project)
 
     def parse(self):
-        for name, module in self.modules.items():
+        generated = 0
+        return
+        for name, module in self.project.tables.items():
             logger.info(f"Preparing {name}")
+
             try:
+                print(module.__dict__)
                 module.prepare()
             except Exception as e:
                 logger.error(f"Preparation failed: {type(e).__name__}: {e}")
-                raise SystemExit("Failed.")
+                raise SystemExit(1)
 
             logger.info(f"Rendering {name}")
+
             try:
                 module.render()
-                module.write()
+                generated += module.write()
             except Exception as e:
                 logger.error(f"Error occured: {type(e).__name__}: {e}")
-                raise SystemExit("Failed.")
+                raise SystemExit(1)
+
+        logger.info(f"Generated {generated} files.")

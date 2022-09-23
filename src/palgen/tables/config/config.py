@@ -5,7 +5,6 @@ class Config(Parser):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.env.filters["has_cli"] = Config.has_cli
-        print(self.out_path)
 
     @staticmethod
     def has_cli(settings):
@@ -76,7 +75,7 @@ class Config(Parser):
         if "cli" not in self.settings or self.settings["cli"]:
             # commandline arguments
             template = self.env.get_template("config/cli.h.in")
-            self.output[self.out_path /
+            self.output[self.out_path  / "src" /
                         "cli.h"] = template.render({"settings": self.input})
 
     def _path_for(self, table):

@@ -46,5 +46,5 @@ class Resource(Parser):
                             "text": resource["text"] if "text" in resource else False,
                             "data": data})
 
-        self.output[self.out_path /
+        self.output[self.out_path  / "src" /
                     "resource.h"] = template.render({"resources": mapping})

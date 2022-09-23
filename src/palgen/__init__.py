@@ -13,7 +13,7 @@ sys.excepthook = handle_exception
 @click.command()
 @click.option('-c', '--config',
               help='Path to project configuration.',
-              default=Path.cwd() / 'project.toml')
+              default=Path.cwd() / 'palgen.toml')
 @click.option('-o', '--outpath',
               help='Build directory.',
               default=Path.cwd() / 'build')

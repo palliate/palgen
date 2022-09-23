@@ -1,0 +1,95 @@
+#pragma once
+#include <optional>
+#include <string_view>
+#include <sstream>
+
+namespace config {
+namespace build {
+//TODO extract
+struct build_info {
+  struct git_info {
+    std::string_view remote_url;
+    std::string_view web_url;
+    std::string_view commit;
+    std::string_view commit_short;
+    bool modified;
+  };
+
+  std::string_view name;
+  std::string_view version;
+  std::string_view description;
+  std::string_view root;
+  const std::optional<git_info> git;
+
+  const std::string str() const {
+    std::stringstream ret;
+    ret << "  Project: " << name << "\n";
+    ret << "  Version: " << version << "\n";
+    ret << "  Description: " << description << "\n";
+    ret << "  Buildroot: " << root << "\n";
+    if (git.has_value()) {
+      auto const& _git = git.value();
+      ret << "    Repository: " << _git.remote_url << " " << _git.commit_short << "\n";
+      ret << "    Commit: " << _git.web_url << "/commit/"
+          << _git.commit << "\n";
+
+    if (_git.modified)
+      ret << "    This build contains untracked changes.\n";
+    }
+    ret << std::endl;
+    return ret.str();
+  }
+};
+
+static const build_info application = {
+  $%- if application %$
+  .name = "${ application.name }$",
+  .version = "${ application.version }$",
+  .description = "${ application.description }$",
+  .root = R"(${ application.root }$)",
+  $%- if application.git %$
+  .git = {{.remote_url = R"(${ application.git.remote_url }$)",
+           .web_url = R"(${ application.git.web_url }$)",
+           .commit = "${ application.git.commit }$",
+           .commit_short = "${ application.git.commit_short }$",
+           .modified = ${ application.git.modified|lower }$}}
+  $%- endif %$
+  $%- endif %$
+};
+
+static const build_info library = {
+  $%- if library %$
+  .name = "${ library.name }$",
+  .version = "${ library.version }$",
+  .description = "${ application.description }$",
+  .root = R"(${ library.root }$)",
+  $%- if library.git %$
+  .git = {{.remote_url = R"(${ library.git.remote_url }$)",
+           .web_url = R"(${ library.git.web_url }$)",
+           .branch = "${ library.git.branch }$",
+           .commit = "${ library.git.commit }$",
+           .commit_short = "${ library.git.commit_short }$",
+           .modified = ${ library.git.modified|lower }$}}
+  $%- endif %$
+  $%- endif %$
+};
+
+static const build_info plugins[] = {
+  $%- for plugin in plugins %$
+  {.name = "${ plugin.name }$",
+   .version = "${ plugin.version }$",
+   .description = R"(${ plugin.description }$)",
+   .root = R"(${ plugin.root }$)",
+   $%- if plugin.git %$
+   .git = {{.remote_url = R"(${ plugin.git.remote_url }$)",
+            .web_url = R"(${ plugin.git.web_url }$)",
+            .branch = "${ plugin.git.branch }$",
+            .commit = "${ plugin.git.commit }$",
+            .commit_short = "${ plugin.git.commit_short }$",
+            .modified = ${ plugin.git.modified|lower }$}}
+    $%- endif -%$
+  },
+  $%- endfor %$
+};
+}  // namespace build
+}  // namespace config
