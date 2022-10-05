@@ -1,12 +1,11 @@
-from pathlib import Path
-
 import logging
 import sys
+from pathlib import Path
+
 import click
 
 from palgen.generator import Generator
 from palgen.log import set_min_level, setup_logger
-
 
 setup_logger()
 
@@ -20,31 +19,36 @@ def handle_exception(type_, value, trace):
         value: Exception value
         trace: Exception trace
     """
-    logging.getLogger(__name__).error("Exception occured: ",
-                                      exc_info=(type_, value, trace))
+    logging.getLogger(__name__).error(
+        "Exception occured: ", exc_info=(type_, value, trace)
+    )
 
 
 sys.excepthook = handle_exception
 
 
 @click.command()
-@click.option('-c', '--config',
-              help='Path to project configuration.',
-              default=Path.cwd() / 'palgen.toml')
-@click.option('-o', '--outpath',
-              help='Build directory.',
-              default=Path.cwd() / 'build')
-@click.option('-v', '--verbosity',
-              help='Log verbosity.',
-              default=0)
-@click.argument('tables', nargs=-1)
+@click.option(
+    "-c",
+    "--config",
+    help="Path to project configuration.",
+    default=Path.cwd() / "palgen.toml",
+)
+@click.option("-o", "--outpath", help="Build directory.", default=Path.cwd() / "build")
+@click.option("-v", "--verbosity", help="Log verbosity.", default=0)
+@click.argument("tables", nargs=-1)
 def main(config, outpath, verbosity, tables):
-    '''This tool is used for code generation.'''
+    """This tool is used for code generation."""
     set_min_level(verbosity)
     logger = logging.getLogger(__name__)
 
+    config = Path(config)
+    if config.is_dir():
+        config /= "palgen.toml"
+
     gen = Generator(config, outpath, tables)
     gen.collect()
+
     outpath = Path(outpath).resolve().absolute()
     logger.debug("Config output path: %s", outpath)
     outpath.mkdir(parents=True, exist_ok=True)

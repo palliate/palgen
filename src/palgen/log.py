@@ -1,19 +1,18 @@
-''' Palgen logging helpers '''
+""" Palgen logging helpers """
 
 import logging
 import sys
 
 
 class LogFormatter(logging.Formatter):
-    """Custom log formatter
-    """
+    """Custom log formatter"""
 
     colors = {
         logging.DEBUG:    "\033[36m",
         logging.INFO:     "\033[32m",
         logging.WARNING:  "\033[33m",
         logging.ERROR:    "\033[31m",
-        logging.CRITICAL: "\033[1m\033[31m"
+        logging.CRITICAL: "\033[1m\033[31m",
     }
 
     time_fmt = "%Y-%m-%d %H:%M:%S"
@@ -37,8 +36,7 @@ class LogFormatter(logging.Formatter):
 
         self.formatters = {
             level: logging.Formatter(self.get_format(color), self.time_fmt)
-            for level, color
-            in LogFormatter.colors.items()
+            for level, color in LogFormatter.colors.items()
         }
 
     def format(self, record: logging.LogRecord) -> str:
@@ -47,8 +45,7 @@ class LogFormatter(logging.Formatter):
 
 
 def setup_logger() -> None:
-    """Enables this custom logger globally.
-    """
+    """Enables this custom logger globally."""
 
     logger = logging.getLogger(__package__)
     logger.setLevel(logging.INFO)

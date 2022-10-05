@@ -1,7 +1,7 @@
-import logging
 import importlib.util
-from pathlib import Path
+import logging
 from dataclasses import dataclass
+from pathlib import Path
 
 from palgen import templates as builtin_templates
 from palgen.parser import Parser
@@ -27,7 +27,13 @@ class Modules:
         for path in builtin_templates.__path__:
             self.load(path)
 
-    def load(self, path):
+    def load(self, path: Path | str):
+        """Loads templates from the given path.
+
+        Args:
+            path (Path | str): Path to template directory
+        """
+
         if not isinstance(path, Path):
             path = Path(path)
 

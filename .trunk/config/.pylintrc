@@ -1,0 +1,7 @@
+[MASTER]
+disable=
+    C0114,
+    E0401,  # Unable to import X; import errors are highly environment dependant
+
+[MESSAGES CONTROL]
+disable = C0330, C0326 # Black compatible

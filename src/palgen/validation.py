@@ -1,7 +1,8 @@
+import logging
 import re
 from dataclasses import dataclass, field
 from typing import Optional
-import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -48,14 +49,14 @@ class String(Value):
 
         if len(data) < self.min_length:
             self.print(
-                "String too short. "
-                f"Required: {self.min_length} Got: {len(data)}")
+                "String too short. " f"Required: {self.min_length} Got: {len(data)}"
+            )
             return False
 
         if self.max_length is not None and len(data) > self.max_length:
             self.print(
-                "String too long. "
-                "Required: {self.max_length} Got: {len(data)}")
+                "String too long. " "Required: {self.max_length} Got: {len(data)}"
+            )
             return False
 
         if self.pattern is not None and not re.match(self.pattern, data):
@@ -123,13 +124,15 @@ class List(Value):
             return False
 
         if len(data) < self.min_length:
-            self.print("List too short. "
-                       f"Required: {self.min_length} Got: {len(data)}")
+            self.print(
+                "List too short. " f"Required: {self.min_length} Got: {len(data)}"
+            )
             return False
 
         if self.max_length is not None and len(data) > self.max_length:
-            self.print("List too long. "
-                       f"Required: {self.max_length} Got: {len(data)}")
+            self.print(
+                "List too long. " f"Required: {self.max_length} Got: {len(data)}"
+            )
             return False
 
         ret = True
@@ -166,9 +169,10 @@ class Dict(Value):
                         ret = False
                         break
 
-                    validate = validator[idx]\
-                        if isinstance(validator, tuple)\
-                        else validator
+                    validate = (
+                        validator[idx] if isinstance(
+                            validator, tuple) else validator
+                    )
 
                     if self._check(data, k, validate, True):
                         temp = True
@@ -208,8 +212,7 @@ class Variant(Value):
 
     def __init__(self, *args):
         super().__init__()
-        variants = [arg() if isinstance(arg, type) else arg
-                    for arg in args]
+        variants = [arg() if isinstance(arg, type) else arg for arg in args]
         object.__setattr__(self, "variants", variants)
 
     def check(self, data, silent=False):
@@ -224,7 +227,7 @@ class Variant(Value):
         return False
 
 
-'''
+"""
 schema = Dict(schema={
   'name': String(),
   'folders': List(item=String(True)),
@@ -257,4 +260,4 @@ data = {
 }
 
 check = schema.check(data)
-print(f"{check=}")'''
+print(f"{check=}")"""

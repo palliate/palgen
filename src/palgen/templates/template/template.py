@@ -1,33 +1,31 @@
-from pathlib import Path
+import logging
 
 from palgen.parser import Parser
-from palgen.module import Modules
-from palgen.validation import *
+from palgen.validation import Dict, List, Maybe, String
 
-import logging
-logger = logging.getLogger('palgen')
+logger = logging.getLogger("palgen")
+
 
 class Template(Parser):
-    settings_schema = Dict({
-        'folders': Maybe(List(String)),
-    })
+    settings_schema = Dict(
+        {
+            "folders": Maybe(List(String)),
+        }
+    )
 
-    config_schema = Dict({'output': Maybe(String)})
+    config_schema = List(Dict)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         print(f"{self.settings=}")
 
-    def load_templates(self, target: Modules):
-        if 'folders' not in self.settings:
-            return
-
-        for folder in self.settings['folders']:
-            path = Path(folder)
-            if not path.is_absolute():
-                path = self.root_path / path
-            logger.debug("Loading templates from %s", path)
-            target.load(path)
+    def prepare(self):
+        # TODO collect export headers
+        # glob for .h, .cpp and CMakeLists.txt?
+        # TODO decide on folder structure
+        pass
 
     def render(self):
-        pass
+        for input in self.input:
+            # TODO copy export headers
+            pass

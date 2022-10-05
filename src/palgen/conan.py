@@ -1,12 +1,18 @@
-''' Conan integration. To automatically enable palgen for a conan projects
- derive the conan schema from the Conan class defined in this module'''
+""" Conan integration. To automatically enable palgen for a conan projects
+ derive the conan schema from the Conan class defined in this module"""
 
 from pathlib import Path
+
 from conans import ConanFile
 
-from palgen.project import Project
 from palgen.generator import Generator
 from palgen.log import set_min_level
+from palgen.project import Project
+
+# Some of the instance vars used are automagically coming from Conan
+# ignore the relevant linting rules.
+# trunk-ignore-all(pylint/E0203)
+# trunk-ignore-all(pylint/W0201)
 
 
 class Conan(ConanFile):
@@ -26,7 +32,7 @@ class Conan(ConanFile):
         self.exports = "palgen.toml"
         set_min_level(2)
 
-        folder = Path(self.recipe_folder) # pylint: disable=no-member
+        folder = Path(self.recipe_folder)  # pylint: disable=no-member
         project = Project(folder / "palgen.toml", only_builtin=True)
         print(project)
 
@@ -56,14 +62,14 @@ class Conan(ConanFile):
         set_min_level(0)
 
         if hasattr(self, "python_requires"):
-            #print(self.python_requires)
+            # print(self.python_requires)
             for name, item in self.python_requires.items():
                 print(item.path)
                 print(name)
-                #pprint(item.module.__dict__)
+                # pprint(item.module.__dict__)
 
         # in non-package builds this will refer to the git repo
-        folder = Path(self.recipe_folder) # pylint: disable=no-member
+        folder = Path(self.recipe_folder)  # pylint: disable=no-member
 
         if self.source_folder:
             # this is only set in package builds
