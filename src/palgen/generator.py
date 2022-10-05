@@ -1,49 +1,44 @@
-import toml
-import importlib
 from pathlib import Path
-from palgen.log import logger
+
+import logging
+import toml
+
 from palgen.project import Project
-
-from typing import Optional
-
-import importlib.util
+logger = logging.getLogger(__name__)
 
 
 class Generator:
-    def __init__(self, config, out_path: str | Path = None, modules: Optional[list] = None):
+    def __init__(self, config, out_path: str | Path = None, modules: list | None = None):
         try:
             self.project = Project(config)
-        except Exception as e:
-            logger.error(
-                f"Could not parse project config. {type(e).__name__}: {e}")
-            raise SystemExit(1)
+        except Exception as exception:
+            logger.exception("Could not parse project config. %s: %s.",
+                             type(exception).__name__,
+                             exception)
+            raise SystemExit(1) from exception
 
-        if not out_path:
-            self.out_path = self.project.root
-        else:
-            self.out_path = Path(out_path).resolve().absolute()
+        self.out_path = Path(out_path).resolve().absolute() \
+            if out_path else self.project.root
 
         # TODO handle enable module overrides
 
-        logger.info(f"Loaded templates: {list(self.project.loaded())}")
-        logger.debug(f"Collecting from {self.project.folders}")
-        logger.debug(f"Root folder: {self.project.root}")
+        logger.info("Loaded templates: %s", self.project.loaded())
+        logger.debug("Collecting from %s", self.project.folders)
+        logger.debug("Root folder: %s", self.project.root)
 
     def collect(self):
         for folder in self.project.folders:
             projects = {}
 
             for project in [*Path.glob(self.project.root, folder + '/**/palgen.toml')]:
-                logger.debug(
-                    f"Found another project at {project.relative_to(self.project.root)}")
+                logger.debug("Found another project at %s",
+                             project.relative_to(self.project.root))
 
-                p = Project(project, self.out_path)
-                projects[project] = p
-                # TODO
+                projects[project] = Project(project, self.out_path)
 
             for config in [*Path.glob(self.project.root, folder + '/**/config.toml')]:
-                logger.debug(
-                    f"Found config at {config.relative_to(self.project.root)}")
+                logger.debug("Found config at %s",
+                             config.relative_to(self.project.root))
 
                 project = self.project
                 for path, value in projects.items():
@@ -55,32 +50,26 @@ class Generator:
                         continue
 
                     if not self.project[module].ingestable:
-                        logger.warning(f"Found data to ingest at {config} but "
-                                       f"module {type(self).__name__} does not expect input.")
+                        logger.warning("Found data to ingest at %s but "
+                                       "module %s does not expect input.",
+                                       config,
+                                       type(self).__name__)
                         continue
 
                     self.project[module].ingest(attributes, config, project)
 
     def parse(self):
         generated = 0
-        return
-        for name, module in self.project.tables.items():
-            logger.info(f"Preparing {name}")
-
+        for name, module in self.project:
             try:
-                print(module.__dict__)
-                module.prepare()
-            except Exception as e:
-                logger.error(f"Preparation failed: {type(e).__name__}: {e}")
-                raise SystemExit(1)
-
-            logger.info(f"Rendering {name}")
-
-            try:
+                module.generate()
+                logger.info("Rendering %s", name)
                 module.render()
-                generated += module.write()
-            except Exception as e:
-                logger.error(f"Error occured: {type(e).__name__}: {e}")
-                raise SystemExit(1)
+                generated += module.write(self.out_path)
+            except Exception as exception:
+                logger.exception("Generating failed: %s: %s",
+                                 type(exception).__name__,
+                                 exception)
+                raise SystemExit(1) from exception
 
-        logger.info(f"Generated {generated} files.")
+        logger.info("Generated %s files.", generated)

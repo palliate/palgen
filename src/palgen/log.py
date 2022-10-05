@@ -1,40 +1,68 @@
+''' Palgen logging helpers '''
+
 import logging
 import sys
 
 
 class LogFormatter(logging.Formatter):
-    debug = "\033[36m"
-    info = "\033[32m"
-    warning = "\033[33m"
-    error = "\033[31m"
-    fatal = "\033[1m\033[31m"
-    reset = "\033[0m"
+    """Custom log formatter
+    """
 
-    format = "(%(asctime)s) "
-    time_format = "%Y-%m-%d %H:%M:%S"
-    FORMATS = {
-        logging.DEBUG:    logging.Formatter(format + debug + "%(message)s" + reset, time_format),
-        logging.INFO:     logging.Formatter(format + info + "%(message)s" + reset, time_format),
-        logging.WARNING:  logging.Formatter(format + warning + "%(message)s" + reset, time_format),
-        logging.ERROR:    logging.Formatter(format + error + "%(message)s" + reset, time_format),
-        logging.CRITICAL: logging.Formatter(
-            format + fatal + "%(message)s" + reset, time_format)
+    colors = {
+        logging.DEBUG:    "\033[36m",
+        logging.INFO:     "\033[32m",
+        logging.WARNING:  "\033[33m",
+        logging.ERROR:    "\033[31m",
+        logging.CRITICAL: "\033[1m\033[31m"
     }
 
-    def format(self, record):
-        formatter = self.FORMATS.get(record.levelno)
+    time_fmt = "%Y-%m-%d %H:%M:%S"
+
+    @staticmethod
+    def get_format(color: str) -> str:
+        """Returns a format string with the appropriate color.
+
+        Args:
+            color (str): ANSI escape code
+
+        Returns:
+            str: fmt string
+        """
+
+        reset = "\033[0m"
+        return f"(%(asctime)s) {color}[%(filename)s:%(lineno)d]: %(message)s{reset}"
+
+    def __init__(self):
+        super().__init__()
+
+        self.formatters = {
+            level: logging.Formatter(self.get_format(color), self.time_fmt)
+            for level, color
+            in LogFormatter.colors.items()
+        }
+
+    def format(self, record: logging.LogRecord) -> str:
+        formatter = self.formatters.get(record.levelno)
         return formatter.format(record)
 
 
-def set_min_level(level):
-    # Convert from palliate log levels to python logging loglevels
-    logger.setLevel((1 + level) * 10)
+def setup_logger() -> None:
+    """Enables this custom logger globally.
+    """
+
+    logger = logging.getLogger(__package__)
+    logger.setLevel(logging.INFO)
+
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(logging.DEBUG)
+    handler.setFormatter(LogFormatter())
+    logger.addHandler(handler)
 
 
-logger = logging.getLogger('codegen')
-logger.setLevel(logging.INFO)
+def set_min_level(level: int):
+    """Disables output of messages below the given level
 
-ch = logging.StreamHandler(sys.stdout)
-ch.setLevel(logging.DEBUG)
-ch.setFormatter(LogFormatter())
-logger.addHandler(ch)
+    Args:
+        level (int): log level #TODO copy description from palliate
+    """
+    logging.getLogger(__package__).setLevel((1 + level) * 10)

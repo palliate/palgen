@@ -1,23 +1,24 @@
-from palgen.log import logger
+from pathlib import Path
+
 from palgen.parser import Parser
-from palgen.templates import Templates
+from palgen.module import Modules
 from palgen.validation import *
 
-from pathlib import Path
+import logging
+logger = logging.getLogger('palgen')
 
 class Template(Parser):
     settings_schema = Dict({
         'folders': Maybe(List(String)),
     })
 
-    config_schema = Dict
+    config_schema = Dict({'output': Maybe(String)})
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         print(f"{self.settings=}")
-        print(f"{self.settings_schema.check(self.settings)=}")
 
-    def load_templates(self, target :Templates):
+    def load_templates(self, target: Modules):
         if 'folders' not in self.settings:
             return
 
@@ -25,5 +26,8 @@ class Template(Parser):
             path = Path(folder)
             if not path.is_absolute():
                 path = self.root_path / path
-
+            logger.debug("Loading templates from %s", path)
             target.load(path)
+
+    def render(self):
+        pass

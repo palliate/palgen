@@ -1,7 +1,8 @@
+import logging
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
-from palgen.log import logger
-#from palgen.project import Project
+
+logger = logging.getLogger(__name__)
 
 
 class Parser:
@@ -25,12 +26,10 @@ class Parser:
 
         if hasattr(self, "settings_schema"):
             if self.settings_schema.check(self.settings):
-                logger.debug(f"Successfully validated settings for `{self.__module__}`")
+                logger.info("Successfully validated settings for `%s`",
+                            self.__module__)
             else:
-                raise RuntimeError(f"Failed to verify schema")
-
-    def prepare(self):
-        pass
+                raise RuntimeError("Failed to verify schema")
 
     def generate(self):
         pass
@@ -38,21 +37,24 @@ class Parser:
     def render(self):
         raise NotImplementedError("Not implemented")
 
-    def write(self, out_path=None):
-        # TODO refactor
-        if not out_path:
-            out_path = Path(self.settings["output"])
-
+    def write(self, out_path):
         for file, data in self.output.items():
-            logger.debug(f"Generated {file.relative_to(self.out_path)}")
+            file = out_path / file
+            logger.debug("Generated %s", file)
             file.parent.mkdir(parents=True, exist_ok=True)
-            with open(file, 'w+') as f:
-                f.write(data)
+            with open(file, 'w+', encoding='utf8') as file:
+                file.write(data)
 
         return len(self.output)
 
     def ingest(self, data, source, project):
-        if type(data) is dict:
+        source = source.parent.resolve()
+        if source.is_relative_to(self.root_path):
+            source = source.relative_to(self.root_path)
+        else:
+            raise RuntimeError("Error during ingest. Config file isn't within root directory.")
+
+        if isinstance(data, dict):
             if not self.input:
                 self.input = {}
 
@@ -61,17 +63,18 @@ class Parser:
                 raise Exception(f"Key collision(s): {collisions}")
 
             for _, item in data.items():
-                item["source"] = source.parent
+                item["source"] = source
                 item["project"] = project
 
             self.input |= data
 
-        elif type(data) is list:
+        if isinstance(data, list):
             if not self.input:
                 self.input = []
 
             for item in data:
-                item["source"] = source.parent
+                item["source"] = source
                 item["project"] = project
 
             self.input.extend(data)
+

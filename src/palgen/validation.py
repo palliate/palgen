@@ -1,7 +1,8 @@
 import re
-from palgen.log import logger
 from dataclasses import dataclass, field
 from typing import Optional
+import logging
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, repr=True)
@@ -16,9 +17,10 @@ class Value:
         self.silence(silent)
         return data is not None
 
+
 @dataclass(frozen=True, repr=True)
 class Maybe:
-    field :Value
+    field: Value
 
     def check(self, data, silent=False):
         if data is None:
@@ -29,11 +31,13 @@ class Maybe:
 
         return self.field.check(data)
 
+
 @dataclass(frozen=True, repr=True)
 class String(Value):
     min_length: int = 1
     max_length: Optional[int] = None
     pattern: Optional[re.Pattern] = None
+    either: Optional[list] = None
 
     def check(self, data, silent=False):
         super().check(data, silent)
@@ -57,6 +61,15 @@ class String(Value):
         if self.pattern is not None and not re.match(self.pattern, data):
             self.print(f"String {data} does not match pattern {self.pattern}")
             return False
+
+        if self.either is not None:
+            if not isinstance(self.either, list):
+                raise ValueError(
+                    "Schema invalid. String.either must be a list")
+
+            if data not in self.either:
+                self.print(f"String `{data}` not in {self.either}.")
+                return False
 
         return True
 
@@ -83,6 +96,7 @@ class Int(Value):
             return self.min <= data
 
         return self.min <= data <= self.max
+
 
 @dataclass(frozen=True, repr=True)
 class Bool(Value):
@@ -147,7 +161,8 @@ class Dict(Value):
                 temp = False
                 for idx, k in enumerate(key):
                     if temp and k in data.keys():
-                        self.print(f"More than one key defined for optional {key}")
+                        self.print(
+                            f"More than one key defined for optional {key}")
                         ret = False
                         break
 
@@ -208,28 +223,38 @@ class Variant(Value):
             f"Allowed types for variant {self.variants}, got {type(data)}")
         return False
 
+
 '''
 schema = Dict(schema={
-    'name': String(),
-    'folders': List(item=String(True)),
-    'version': String(pattern="v[0-9.]+$"),
-    'type': String(pattern="(application|library|plugin)$"),
-    'test': Maybe(Dict()),
-    'ambi': Variant(String(max_length=2), Int()),
-    #('multi', 'foo'): (Int(), String())
+  'name': String(),
+  'folders': List(item=String(True)),
+  'version': String(pattern="v[0-9.]+$"),
+  'type': String(pattern="(application|library|plugin)$"),
+  'test': Maybe(Dict()),
+  'ambi': Variant(String(max_length=2), Int()),
+  #('multi', 'foo'): (Int(), String())
 })
 
+schema = {
+  'name': str,
+  'folders': [str],
+  'version': String(pattern="v[0-9.]+$"),
+  'type': String(either=["application", "library", "plugin"]),
+  'test': Optional[{}],0
+  'ambi': Any[String(max_length=2), int],
+  ('multi', 'foo'): (int, str)
+}
+
 data = {
-    'name': "3",
-    'version': "v0.1",
-    'type': "library",
-    'folders': ["affa", "3", "b"],
-    'test': {},
-    'ambi': "33",
-    #'test': 34
-    #'multi': 3
+  'name': "3",
+  'version': "v0.1",
+  'type': "library",
+  'folders': ["affa", "3", "b"],
+  'test': {},
+  'ambi': "33",
+  #'test': 34
+  #'multi': 3
 }
 
 check = schema.check(data)
 print(f"{check=}")'''
-

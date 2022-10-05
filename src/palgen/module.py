@@ -1,26 +1,30 @@
+import logging
 import importlib.util
 from pathlib import Path
 from dataclasses import dataclass
 
-from palgen.log import logger
+from palgen import templates as builtin_templates
 from palgen.parser import Parser
 
+logger = logging.getLogger(__name__)
+
+
 @dataclass
-class Template:
-    name    :str
-    parser  :type
-    path    :Path
+class Module:
+    name: str
+    parser: type
+    path: Path
 
-    def __call__(self, root, settings = {}):
-        return self.parser(root, self.path, settings)
+    def __call__(self, root, settings=None):
+        return self.parser(root, self.path, settings or {})
 
-class Templates:
+
+class Modules:
     def __init__(self):
         self._templates = {}
 
         # load builtin templates
-        from palgen import tables
-        for path in tables.__path__:
+        for path in builtin_templates.__path__:
             self.load(path)
 
     def load(self, path):
@@ -35,12 +39,12 @@ class Templates:
                 continue
             if folder.name in self._templates:
                 logger.warning(
-                    f"Template {folder.name} defined more than once.")
+                    "Template %s defined more than once.", folder.name)
                 continue
 
             temp = []
             for file in folder.glob('*.py'):
-                #TODO use unique id to avoid name conflicts?
+                # TODO use unique id to avoid name conflicts?
                 spec = importlib.util.spec_from_file_location(
                     folder.name, file)
                 module = importlib.util.module_from_spec(spec)
@@ -51,17 +55,19 @@ class Templates:
                          if not name.startswith('_')]
 
                 temp.extend([attr
-                            for attr in attrs
-                            if isinstance(attr, type)
+                             for attr in attrs
+                             if isinstance(attr, type)
                              and issubclass(attr, Parser)
                              and attr is not Parser])
 
             if len(temp) == 1:
-                logger.debug(f"Found template {folder.name}")
-                self._templates[folder.name] = Template(folder.name, temp[0], folder.resolve())
+                logger.debug("Found template `%s`", folder.name)
+                self._templates[folder.name] = Module(folder.name,
+                                                      temp[0],
+                                                      folder.resolve())
             elif len(temp) > 1:
-                logger.warning(f"More than one template defined"
-                               " within subdirectory: {folder.name}")
+                logger.warning("More than one template defined within subdirectory: %s",
+                               folder.name)
 
     def __getitem__(self, key):
         return self._templates[key]
@@ -71,3 +77,6 @@ class Templates:
 
     def __iter__(self):
         return iter(self._templates.items())
+
+    def __str__(self) -> str:
+        return str(self._templates)
