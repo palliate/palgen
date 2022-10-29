@@ -10,10 +10,10 @@ runtimes:
     - python@3.10.3
 lint:
   disabled:
+    - prettier
     - black
   enabled:
     - flake8@5.0.4
-    - prettier@2.7.1
     - actionlint@1.6.20
     - autopep8@1.7.0
     - git-diff-check
