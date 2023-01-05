@@ -5,9 +5,8 @@ from pathlib import Path
 
 from conans import ConanFile
 
-from palgen.generator import Generator
 from palgen.log import set_min_level
-from palgen.project import Project
+from palgen.loader import Loader
 
 # Some of the instance vars used are automagically coming from Conan
 # ignore the relevant linting rules.
@@ -22,18 +21,33 @@ class Conan(ConanFile):
         ConanFile: Conan recipe base class
     """
 
-    def init(self):
+    @classmethod
+    def __init_subclass__(cls, **kwargs):
+        cls._wrap("init")
+        cls._wrap("generate")
+
+    @classmethod
+    def _wrap(cls, name):
+        if hasattr(cls, name):
+            setattr(cls, f'_{name}', getattr(cls, name))
+
+        def replacement(self):
+            nonlocal name
+            for fnc in [f'_palgen_{name}', f'_{name}']:
+                if hasattr(self, fnc):
+                    getattr(self, fnc)()
+
+        setattr(cls, name, replacement)
+
+    def _palgen_init(self):
         """Derives name, version and optionally description from palgen project definition.
         Also adds the palgen project configuration and all sources to export_sources.
-
-        Remember to call this method when overriding init() or alternatively
-        override _init() instead.
         """
         self.exports = "palgen.toml"
         set_min_level(2)
 
-        folder = Path(self.recipe_folder)  # pylint: disable=no-member
-        project = Project(folder / "palgen.toml", only_builtin=True)
+        folder = Path(self.recipe_folder)
+        project = Loader(folder / "palgen.toml")
         print(project)
 
         self.name = project.name
@@ -44,40 +58,26 @@ class Conan(ConanFile):
         if not self.exports_sources:
             self.exports_sources = []
 
-        self.exports_sources.extend(
-            [f"{folder}/*" for folder in project.folders])
+        self.exports_sources.extend([f"{folder}/*"
+                                     for folder in project.folders])
         self.exports_sources.append("palgen.toml")
 
-        if hasattr(self, "_init"):
-            self._init()
-
-    def generate(self):
+    def _palgen_generate(self):
         """Runs palgen during generate step.
         Derives palgen templates from python_requires.
-
-        Remember to call this method when overriding generate() or alternatively
-        override _generate() instead.
         """
 
         set_min_level(0)
+        folder = Path(self.source_folder or self.recipe_folder)
+
+        project = Loader(folder / "palgen.toml")
 
         if hasattr(self, "python_requires"):
-            # print(self.python_requires)
-            for name, item in self.python_requires.items():
-                print(item.path)
-                print(name)
-                # pprint(item.module.__dict__)
+            for name, dependency in self.python_requires.items():
+                if name in project.subprojects:
+                    continue
 
-        # in non-package builds this will refer to the git repo
-        folder = Path(self.recipe_folder)  # pylint: disable=no-member
+                path = Path(dependency.path).parent / "export_source" / "palgen.toml"
+                project.subprojects[name] = Loader(path)
 
-        if self.source_folder:
-            # this is only set in package builds
-            folder = Path(self.source_folder)
-
-        generator = Generator(folder / "palgen.toml", folder, [])
-        generator.collect()
-        generator.parse()
-
-        if hasattr(self, "_generate"):
-            self._generate()
+        project.run()

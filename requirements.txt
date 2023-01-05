@@ -1,0 +1,5 @@
+toml>=0.10
+jinja2
+click
+colorama
+pydantic

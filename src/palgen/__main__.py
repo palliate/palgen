@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
 ''' Allow running palgen as module: `python -m palgen` '''
 
-from colorama import init
-from . import main
-
-init()
-
+from palgen.cli import main
 
 if __name__ == "__main__":
     # Disable missing parameter warning - these are handled by click

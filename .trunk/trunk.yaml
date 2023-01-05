@@ -13,17 +13,18 @@ lint:
     - prettier
     - black
   enabled:
-    - flake8@5.0.4
-    - actionlint@1.6.20
-    - autopep8@1.7.0
+    - mypy@0.991
+    - flake8@6.0.0
+    - actionlint@1.6.22
+    - autopep8@2.0.1
     - git-diff-check
-    - gitleaks@8.13.0
-    - isort@5.10.1
+    - gitleaks@8.15.2
+    - isort@5.11.3
     - markdownlint@0.32.2
-    - taplo@release-taplo-cli-0.7.0
-    - pylint@2.15.3
+    - taplo@0.8.0
+    - pylint@2.15.9
 cli:
-  version: 0.18.1-beta
+  version: 1.2.1
 plugins:
   sources:
     - id: trunk
