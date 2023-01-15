@@ -124,11 +124,12 @@ class AST:
 
 
 def get_import_name(import_: type | ModuleType) -> tuple[list[str], Optional[str]]:
+    #TODO use __qualname__ (dotted full name)
     if isinstance(import_, type):
         if import_.__module__ == 'builtins':
-            return [], import_.__qualname__
+            return [], import_.__name__
 
-        return import_.__module__.split('.'), import_.__qualname__
+        return import_.__module__.split('.'), import_.__name__
 
     if isinstance(import_, ModuleType):
         return import_.__name__.split('.'), None

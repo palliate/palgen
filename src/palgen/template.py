@@ -1,48 +1,58 @@
 import inspect
 import logging
-from dataclasses import dataclass
+from functools import reduce
 from pathlib import Path
-from typing import Any, Generator, Iterator, Optional
+from typing import Any, Iterator, Optional
 
-import toml
+import click
 from jinja2 import Environment, FileSystemLoader
 from pydantic import BaseModel, ValidationError
 
-from palgen.util.transformations import compress
+from palgen.ingest import Ingest, Meta
+from palgen.ingest.toml import Toml
+from palgen.util.filesystem import SuffixDict
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class Meta:
-    name: str
-    namespace: str
-    source: Path
-    relative_path: Path
-
-
 class Template:
+    Config = BaseModel
     Schema = BaseModel
+
     environment: Environment
-    ingestable: bool
+    key: str
+    extension: str
+    loader: Ingest
 
     @classmethod
-    def __init_subclass__(cls,
+    def _check_schema(cls, name):
+        if hasattr(cls, name) and (schema := getattr(cls, name)):
+            if schema is BaseModel:
+                return
+
+            if not isinstance(schema, type):
+                raise SyntaxError(
+                    f"{name} of template `{cls.key}` is not a type.")
+
+            if BaseModel not in schema.__bases__:
+                raise SyntaxError(
+                    f"{name} of template `{cls.key}` isn't a pydantic model.")
+    @staticmethod
+    def _print_validationerror(exception: ValidationError):
+        for error in exception.errors():
+            for loc in error["loc"]:
+                logger.warning("  %s", loc)
+            logger.warning("    %s (type=%s)", error["msg"], error["type"])
+
+    @classmethod
+    def __init_subclass__(cls, *,
                           ingestable: bool = True,
                           key: Optional[str] = None,
                           extension: str = '.toml') -> None:
-
-        if hasattr(cls, "Schema") and (schema := getattr(cls, "Schema")):
-            if schema is not BaseModel:
-                name = cls.__name__
-                if not isinstance(schema, type):
-                    raise SyntaxError(
-                        f"Schema of template `{name}` is not a type.")
-
-                if BaseModel not in schema.__bases__:
-                    print(schema.__bases__)
-                    raise SyntaxError(
-                        f"Schema of template `{name}` isn't a pydantic model.")
+        setattr(cls, "key", key or cls.__name__.lower())
+        setattr(cls, "extension", extension)
+        Template._check_schema("Config")
+        Template._check_schema("Schema")
 
         path = Path(inspect.stack()[1].filename).parent
         setattr(cls, "environment", Environment(
@@ -56,69 +66,50 @@ class Template:
             keep_trailing_newline=True,
         ))
 
-        setattr(cls, "ingestable", ingestable)
-        setattr(cls, "key", key or cls.__name__.lower())
-        setattr(cls, "extension", extension)
+        if not hasattr(cls, "loader"):
+            setattr(cls, "loader", Toml())
 
-    def __init__(self, root_path: Path, settings: dict):
-        self.settings: Any = None
-        self.name: str = type(self).__name__
+        if not hasattr(cls, "cli"):
+            @click.command(name=cls.key)
+            @click.pass_context
+            def cli(ctx, **kwargs):
+                settings = ctx.obj.settings.get(cls.key, {})
+                settings |= {k:v for k, v in kwargs.items() if v}
+                print(settings)
+                parser = cls(ctx.obj.root, ctx.obj.root, settings)
+                files = list(parser.run(ctx.obj.files))
+
+                logger.info(f"{parser=} yielded {files=}")
+            for field, attribute in cls.Config.__fields__.items():
+                # TODO handle required
+                cli = click.option(f'--{field}', type=attribute.type_)(cli)
+            setattr(cls, "cli", cli)
+
+    def __init__(self, root_path: Path, out_path: Path, settings: Optional[dict] = None):
         self.root_path = root_path
-        self.keys: set[str] = set()
-        self.output = {}
+        self.out_path = out_path
+        try:
+            self.settings = self.Config.parse_obj(settings)
+            logger.debug("Validated settings for %s", self.key)
+        except ValidationError as ex:
+            logger.warning("Failed verifying config for `%s`", self.key)
+            self._print_validationerror(ex)
+            raise SystemExit(1) from ex
 
-        if hasattr(self, "Settings"):
-            validator = getattr(self, "Settings")
-            if BaseModel not in validator.__bases__:
-                raise TypeError(
-                    "Settings subclass must be of type pydantic.BaseModel")
+    def ingest(self, source_tree: SuffixDict) -> Iterator[tuple[Meta, Any | BaseModel]]:
+        if not self.loader:
+            print("nothing to do")
+            return
 
-            self.settings = validator(**settings)
-            logger.debug("Validated settings for %s", self.name)
-        else:
-            if settings:
-                logger.warning(
-                    "Got settings but %s accepts no settings.", self.name)
-
-    def ingest(self, paths: list[Path]) -> Iterator[tuple[str, Meta, BaseModel]]:
-        for source in paths:
+        for source in source_tree.by_name(f"{self.key}{self.extension}"):
             logger.debug("Ingesting %s.", source)
 
-            yield from self.load_toml(source)
-
-    def load_toml(self, path: Path):
-
-        if (relative_path := path.parent).is_relative_to(self.root_path):
-            relative_path = relative_path.relative_to(self.root_path)
-        else:
-            raise RuntimeError("Config file isn't within root directory.")
-
-        data = toml.load(path)
-
-        file_namespace = data.pop("namespace", None)
-        if isinstance(file_namespace, str):
-            file_namespace = file_namespace.split('.')
-
-        for namespace, name, value in compress(data, file_namespace):
-            full_name = f"{namespace}.{name}" if namespace else name
-            if full_name in self.keys:
-                logger.warning(
-                    "Key collision: `%s` already contained", full_name)
-                continue
-
-            try:
-                self.keys.add(full_name)
-                yield (full_name,
-                       Meta(name, namespace, path, relative_path),
-                       self.Schema.parse_obj(value))
-
-            except ValidationError as ex:
-                logger.warning("%s failed verification.", full_name)
-                for error in ex.errors():
-                    for loc in error["loc"]:
-                        logger.warning("  %s", loc)
-                    logger.warning("    %s (type=%s)",
-                                   error["msg"], error["type"])
+            for meta, data in self.loader.data(source):
+                try:
+                    yield meta, self.Schema.parse_obj(data)
+                except ValidationError as ex:
+                    logger.warning("%s failed verification.", meta.qualname)
+                    self._print_validationerror(ex)
 
     def render(self, data: Iterator[tuple[str, Meta, BaseModel]]) -> Iterator[tuple[Path, str]]:
         """Render the prepared data.
@@ -138,7 +129,7 @@ class Template:
         # trunk-ignore(pylint/W0101)
         yield Path(), ""
 
-    def write(self, out_path: Path, output: Iterator[tuple[Path, str]]) -> Iterator[Path]:
+    def write(self, output: Iterator[tuple[Path, str]]) -> Iterator[Path]:
         """Write the rendered files back to disk.
 
         Args:
@@ -149,13 +140,21 @@ class Template:
             Iterator[Path]: Paths of generated files
         """
         for filename, generated in output:
-            filename = out_path / filename
+            filename = self.out_path / filename
             filename.parent.mkdir(parents=True, exist_ok=True)
             with open(filename, "w+", encoding="utf8") as file:
                 file.write(generated)
 
             logger.debug("Generated %s", filename)
             yield filename
+
+    def run(self, source_tree: SuffixDict) -> Iterator[Path]:
+        yield from reduce(lambda x, step: step(x), [
+            source_tree,
+            self.ingest,
+            self.render,
+            self.write
+        ])
 
     def get_template(self, name: str, **kwargs):
         return self.environment.get_template(name, **kwargs)

@@ -5,7 +5,7 @@ from pathlib import Path
 
 from conans import ConanFile
 
-from palgen.log import set_min_level
+from palgen.util.log import set_min_level
 from palgen.loader import Loader
 
 # Some of the instance vars used are automagically coming from Conan

@@ -29,7 +29,7 @@ class LogFormatter(logging.Formatter):
         """
 
         reset = "\033[0m"
-        return f"(%(asctime)s) {color}[%(filename)s:%(lineno)d]: %(message)s{reset}"
+        return f"(%(asctime)s) {color}%(brace_l)s%(filename)s:%(lineno)d%(brace_r)s: %(message)s{reset}"
 
     def __init__(self):
         super().__init__()
@@ -40,20 +40,21 @@ class LogFormatter(logging.Formatter):
         }
 
     def format(self, record: logging.LogRecord) -> str:
+        builtin = record.name != 'root'
+        record.brace_l = '[' if builtin else '('
+        record.brace_r = ']' if builtin else ')'
         formatter = self.formatters.get(record.levelno)
         return formatter.format(record)
 
 
 def setup_logger() -> None:
     """Enables this custom logger globally."""
-
-    logger = logging.getLogger(__package__)
-    logger.setLevel(logging.INFO)
-
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(logging.DEBUG)
     handler.setFormatter(LogFormatter())
-    logger.addHandler(handler)
+
+    logging.basicConfig(level=logging.DEBUG, handlers=[handler], force=True)
+    logging.root.addHandler(handler)
 
 
 def set_min_level(level: int):
@@ -62,4 +63,4 @@ def set_min_level(level: int):
     Args:
         level (int): log level #TODO copy description from palliate
     """
-    logging.getLogger(__package__).setLevel((1 + level) * 10)
+    logging.root.setLevel((1 + level) * 10)

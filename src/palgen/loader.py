@@ -35,6 +35,9 @@ class Loader:
             return values
 
         # region boilerplate
+        def get(self, key, default = None):
+            return self.__root__.get(key, default)
+
         def __iter__(self):
             return iter(self.__root__)
 
@@ -71,7 +74,7 @@ class Loader:
         self.root = self.config_file.parent
 
         self.project = Project.parse_obj(self.settings['project'])
-        self.active_templates: dict[str, Template] = {}
+        self.active_templates: dict[str, Template] = {} #?
 
         self.output = self._path_for(self.project.output) \
             if self.project.output else self.root
@@ -110,7 +113,7 @@ class Loader:
 
         for project in templates_.inherit:
             if project in self.subprojects:
-                templates_.inherit(self.subprojects[project].templates)
+                templates_.inherit_templates(self.subprojects[project].templates)
             # TODO load templates from repos or through conan
 
         return templates_
@@ -119,13 +122,13 @@ class Loader:
     def subprojects(self) -> dict[str, Loader]:
         subprojects_: dict[str, Loader] = {}
         for file in self.files.by_name('palgen.toml'):
-            project = Loader(file)
-            if project.name in subprojects_:
+            loader = Loader(file)
+            if loader.project.name in subprojects_:
                 logger.warning("Found project %s more than once.",
-                               project.name)
+                               loader.name)
                 continue
 
-            subprojects_[project.name] = project
+            subprojects_[loader.project.name] = loader
 
         return subprojects_
 
@@ -137,29 +140,17 @@ class Loader:
         return self.root / path
 
 
-    def find_template(self, template: str) -> Optional[TemplateMeta]:
-        if template in self.templates:
-            return self.templates[template]
-
-        if self.templates.inherit is None:
-            return None
-
-        for name in self.templates.inherit:
-            if name not in self.subprojects:
-                continue
-
-            subproject = self.subprojects[name]
-            if found := subproject.find_template(template):
-                return found
-        return None
-
     def run(self, *templates: str):
         templates_ = set(templates)
         generated: list[Path] = []
-        #TODO get enabled from config file
+        # TODO get enabled from config file
 
         for template in templates_:
-            if parser := self.find_template(template):
+            if template not in self.templates:
+                logger.warning("Module `%s` not found.", template)
+                continue
+
+            if parser := self.templates[template]:
                 settings = self.settings[template] \
                     if template in self.settings else {}
 
@@ -167,14 +158,14 @@ class Loader:
                 logger.info("Rendering template `%s`", module.name)
                 try:
                     data = None
-                    if module.ingestable:
-                        # TODO allow custom ingests
+                    if True:#module.loader:
                         if files := self.files.by_name(f"{module.key}{module.extension}"):
                             data = module.ingest(files)
                             render = module.render(data)
                             generated.extend(module.write(self.output, render))
                         else:
-                            logger.debug("No input for template `%s` found", module.key)
+                            logger.debug(
+                                "No input for template `%s` found", module.key)
                 except Exception as exception:
                     logger.exception(
                         "Generating failed: %s: %s", type(
@@ -187,8 +178,8 @@ class Loader:
                     len(generated))
 
     # region boilerplate
-    def __getattr__(self, field: str):
-        return getattr(self.project, field)
+#    def __getattr__(self, field: str):
+#        return getattr(self.project, field)
 
     def __eq__(self, other: Path | str | Loader) -> bool:
         if isinstance(other, Path):

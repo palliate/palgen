@@ -40,7 +40,7 @@ class Templates(BaseModel):
 
     _templates: dict[str, TemplateMeta] = PrivateAttr(default_factory=dict)
 
-    def inherit(self, templates: 'Templates'):
+    def inherit_templates(self, templates: 'Templates'):
         for key, meta in templates:
             #TODO check if inheritable
             #TODO check for collisions
@@ -75,7 +75,7 @@ class Templates(BaseModel):
             if not issubclass(attr, Template) or attr is Template:
                 continue
 
-            name = attr.__name__
+            name = attr.__name__.lower()
             if name in self._templates:
                 logger.warning("Template %s redefined. Skipping.", name)
                 continue
@@ -93,13 +93,13 @@ class Templates(BaseModel):
         # TODO
 
     #region boilerplate
-    def keys(self):
+    def keys(self) -> Iterator[str]:
         return self._templates.keys()
 
-    def values(self):
+    def values(self) -> Iterator[TemplateMeta]:
         return self._templates.values()
 
-    def items(self):
+    def items(self) -> Iterator[tuple[str, TemplateMeta]]:
         return self._templates.items()
 
     def __getitem__(self, key) -> TemplateMeta:

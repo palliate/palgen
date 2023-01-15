@@ -3,16 +3,17 @@ import sys
 
 from colorama import init
 
-from palgen.cli import main
 from palgen.loader import Loader
-from palgen.log import setup_logger
+from palgen.integrations.conan import Conan
+from palgen.util.log import setup_logger
+from palgen.cli import cli as main
 
 init()
 setup_logger()
 
 
-__all__ = ['Loader', 'main']
-
+__all__ = ['Loader', 'Conan', 'main']
+globals()['Project'] = Loader
 
 def handle_exception(type_, value, trace):
     """Global exception handler.
@@ -24,7 +25,7 @@ def handle_exception(type_, value, trace):
         trace: Exception trace
     """
     logger = logging.getLogger(__name__)
-    if logger.isEnabledFor(logging.DEBUG):
+    if True:#logger.isEnabledFor(logging.DEBUG):
         logger.exception("Exception occured: ", exc_info=(type_, value, trace))
     else:
         logger.error("Exception occured: %s %s", type_.__name__, value)
