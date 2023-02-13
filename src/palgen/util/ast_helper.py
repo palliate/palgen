@@ -107,7 +107,6 @@ class AST:
                 if import_.real_name == name:
                     yield import_.name
 
-
     def contains_subclass(self, base: type, count: int | None = None):
         module = base.__module__ if base.__module__ != 'builtin' else None
         name = base.__qualname__
@@ -124,7 +123,7 @@ class AST:
 
 
 def get_import_name(import_: type | ModuleType) -> tuple[list[str], Optional[str]]:
-    #TODO use __qualname__ (dotted full name)
+    # TODO use __qualname__ (dotted full name)
     if isinstance(import_, type):
         if import_.__module__ == 'builtins':
             return [], import_.__name__

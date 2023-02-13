@@ -1,19 +1,21 @@
 import logging
 from pathlib import Path
+from typing import Iterable
 
-import toml  # TODO do this lazily
+import toml
 
-from palgen.ingest import Meta, Ingest
+from palgen.ingest import Ingest
 from palgen.util.transformations import compress
 
 logger = logging.getLogger(__name__)
 
 
 class Toml(Ingest):
-    extension = '.toml'
+    def ingest(self, files: Iterable[Path]):
+        for file in files:
+            yield from self.parse(file)
 
-    @classmethod
-    def data(cls, path: Path):
+    def parse(self, path: Path):
         data = toml.load(path)
 
         file_namespace = data.pop("namespace", None)
@@ -21,4 +23,4 @@ class Toml(Ingest):
             file_namespace = file_namespace.split('.')
 
         for namespace, name, value in compress(data, file_namespace):
-            yield Meta([*namespace, name], path), value
+            yield path, ([*namespace, name], value)

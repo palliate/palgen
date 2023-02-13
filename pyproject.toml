@@ -20,3 +20,15 @@
     warn_unused_configs    = true
     no_implicit_reexport   = true
     warn_unused_ignores    = true
+
+[tool.pylint.'MESSAGES CONTROL']
+    disable = """
+        C0114,
+        E0401,
+        C0115,
+        R0903,
+        C0116,
+        missing-class-docstring,
+        no-name-in-module,
+        import-outside-toplevel
+    """

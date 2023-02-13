@@ -55,13 +55,14 @@ def walk(path: Path | str, ignores: PathFilter | set[Pattern]):
 
     if (probe := path / 'palgen.toml').exists():
         # skip subtrees of other projects but yield the project file
+        logger.debug("Found another palgen project in `%s`. Skipping.")
         yield probe
         return
 
     for entry in path.iterdir():
         if ignores.check(entry):
             # honor .gitignore, skip this entry
-            logger.debug("Skipped %s", entry)
+            logger.debug("Skipped `%s`", entry)
             continue
 
         if entry.is_file():
@@ -69,6 +70,7 @@ def walk(path: Path | str, ignores: PathFilter | set[Pattern]):
 
         elif entry.is_dir():
             yield from walk(entry, ignores)
+
 
 class SuffixDict(defaultdict[str, defaultdict[str, list[Path]]]):
     def __init__(self):

@@ -3,10 +3,10 @@
 
 from pathlib import Path
 
-from conans import ConanFile
+from conan import ConanFile
 
 from palgen.util.log import set_min_level
-from palgen.loader import Loader
+from palgen.palgen import Palgen
 
 # Some of the instance vars used are automagically coming from Conan
 # ignore the relevant linting rules.
@@ -47,19 +47,19 @@ class Conan(ConanFile):
         set_min_level(2)
 
         folder = Path(self.recipe_folder)
-        project = Loader(folder / "palgen.toml")
-        print(project)
+        loader = Palgen(folder / "palgen.toml")
+        print(loader)
 
-        self.name = project.name
-        self.version = project.version
-        if project.description is not None:
-            self.description = project.description
+        self.name = loader.project.name
+        self.version = loader.project.version
+        if loader.project.description is not None:
+            self.description = loader.project.description
 
         if not self.exports_sources:
             self.exports_sources = []
 
         self.exports_sources.extend([f"{folder}/*"
-                                     for folder in project.folders])
+                                     for folder in loader.project.folders])
         self.exports_sources.append("palgen.toml")
 
     def _palgen_generate(self):
@@ -70,14 +70,14 @@ class Conan(ConanFile):
         set_min_level(0)
         folder = Path(self.source_folder or self.recipe_folder)
 
-        project = Loader(folder / "palgen.toml")
+        loader = Palgen(folder / "palgen.toml")
 
         if hasattr(self, "python_requires"):
             for name, dependency in self.python_requires.items():
-                if name in project.subprojects:
+                if name in loader.subprojects:
                     continue
 
                 path = Path(dependency.path).parent / "export_source" / "palgen.toml"
-                project.subprojects[name] = Loader(path)
+                loader.subprojects[name] = Palgen(path)
 
-        project.run()
+        loader.run()

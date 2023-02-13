@@ -15,49 +15,49 @@ def mock_file(content=""):
 def test_resolve_module():
     import palgen
     module, name = get_import_name(palgen)
-    assert module == 'palgen'
+    assert module == ['palgen']
     assert name is None
 
-    import palgen.template
-    module, name = get_import_name(palgen.template)
-    assert module == 'palgen.template'
+    import palgen.module
+    module, name = get_import_name(palgen.module)
+    assert module == ['palgen', 'module']
     assert name is None
 
 def test_resolve_builtin():
     module, name = get_import_name(str)
-    assert module is None
+    assert module == []
     assert name == 'str'
 
 
 def test_resolve_bare():
-    import palgen.template
-    module, name = get_import_name(palgen.template.Template)
-    assert module == 'palgen.template'
-    assert name == 'Template'
+    import palgen.module
+    module, name = get_import_name(palgen.module.Module)
+    assert module == ['palgen', 'module']
+    assert name == 'Module'
 
 
 def test_resolve_from():
-    from palgen.template import Template
-    module, name = get_import_name(Template)
-    assert module == 'palgen.template'
-    assert name == 'Template'
+    from palgen.module import Module
+    module, name = get_import_name(Module)
+    assert module == ['palgen', 'module']
+    assert name == 'Module'
 
-    from palgen import template
-    module, name = get_import_name(template.Template)
-    assert module == 'palgen.template'
-    assert name == 'Template'
+    from palgen import module
+    module, name = get_import_name(module.Module)
+    assert module == ['palgen', 'module']
+    assert name == 'Module'
 
 
 def test_resolve_alias():
-    from palgen.template import Template as templ
+    from palgen.module import Module as templ
     module, name = get_import_name(templ)
-    assert module == 'palgen.template'
-    assert name == 'Template'
+    assert module == ['palgen', 'module']
+    assert name == 'Module'
 
-    from palgen import template as module
-    module, name = get_import_name(module.Template)
-    assert module == 'palgen.template'
-    assert name == 'Template'
+    from palgen import module as module
+    module, name = get_import_name(module.Module)
+    assert module == ['palgen', 'module']
+    assert name == 'Module'
 
 
 def test_import_builtins():
@@ -71,28 +71,28 @@ def test_import_builtins():
 
 
 @pytest.mark.parametrize('content', [
-    'from palgen.template import Template',
-    'from palgen import template',
+    'from palgen.module import Module',
+    'from palgen import Module',
     'import palgen',
-    'from palgen.template import Template as templ',
+    'from palgen.module import Module as templ',
 ])
 def test_import(content):
-    from palgen.template import Template
+    from palgen.module import Module
     with mock_file(content):
         ast = AST(MOCK_PATH)
         #TODO
-        for possible in ast.possible_names(Template):
+        for possible in ast.possible_names(Module):
             print(f"{possible=}")
         assert True
 
 
 if __name__ == '__main__':
-    for c in ['from palgen.template import Template',
-    'from palgen import template',
+    for c in ['from palgen.module import Module',
+    'from palgen import Module',
     'from palgen import *',
-    'from palgen.template import Template as templ',
-    'import palgen.template',
-    'import palgen.template as t',
+    'from palgen.module import Module as templ',
+    'import palgen.module',
+    'import palgen.module as t',
     'import palgen as p'
     ]:
         print()

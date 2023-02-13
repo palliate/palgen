@@ -44,6 +44,7 @@ class LogFormatter(logging.Formatter):
         record.brace_l = '[' if builtin else '('
         record.brace_r = ']' if builtin else ')'
         formatter = self.formatters.get(record.levelno)
+        assert formatter
         return formatter.format(record)
 
 
@@ -53,7 +54,7 @@ def setup_logger() -> None:
     handler.setLevel(logging.DEBUG)
     handler.setFormatter(LogFormatter())
 
-    logging.basicConfig(level=logging.DEBUG, handlers=[handler], force=True)
+    logging.basicConfig(level=logging.INFO, handlers=[handler], force=True)
     logging.root.addHandler(handler)
 
 

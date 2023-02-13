@@ -2,79 +2,97 @@ import timeit
 from functools import reduce
 
 
-def foo1(g):
-    for i in g:
+def foo1(bar):
+    for i in bar:
         yield i + 1
 
 
-def foo2(g):
-    for i in g:
+def foo2(bar):
+    for i in bar:
         yield 10 + i
 
 
-def foo3(g):
-    for i in g:
+def foo3(bar):
+    for i in bar:
         yield 'foo3:' + str(i)
-
-
-LIMIT = 10000000
 
 
 def wrap(f):
     return lambda: list(f())
 
+LIMIT = 100000
+RUNS = 100
+
 
 def time(*funcs):
     for func in funcs:
-        num_runs = 20
-        duration = timeit.Timer(wrap(func)).timeit(number=num_runs)
-        avg_duration = duration/num_runs
+        duration = timeit.Timer(wrap(func)).timeit(number=RUNS)
+        avg_duration = duration/RUNS
         print(
-            f'Average after {num_runs} runs: {func.__name__} {avg_duration} seconds')
-
-
-def pipeline(*steps):
-    return reduce(lambda x, y: y(x), list(steps))
+            f'Average after {RUNS} runs: {func.__name__} {avg_duration} seconds')
 
 
 class Pipeline:
-    def __init__(self, data):
-        self.data = data
-        self.functions = []
+    def __init__(self, state=None):
+        self.steps = [state] if state is not None else []
 
-    def __rshift__(self, x):
-        self.functions.append(x)
+    def __rshift__(self, step):
+        self.steps.append(step)
         return self
-        # return self.task(Pipeline(x))
 
     def __iter__(self):
-        x = self.data
-        for function in self.functions:
-            x = function(x)
-        yield from x
+        yield from reduce(lambda state, step: step(state), self.steps)
 
-    def d__iter__(self):
-        yield from reduce(lambda x, y: y(x), self.functions)
 
+class Pipe:
+    def __init__(self, step, next=None):
+        self.step = step
+        self.next = next
+
+    def __rshift__(self, step):
+        return Pipe(self, step)
+
+    def __iter__(self):
+        yield from self.next(self.step) if self.next is not None else self.step
+
+class Pipelineable:
+    def __init__(self, task):
+        self.task = task
+
+    def __rrshift__(self, x):
+        return self.task(x)
 
 def nested():
     yield from foo3(foo2(foo1(range(0, LIMIT))))
 
-def pipelined():
-    yield from reduce(lambda x, y: y(x), [
+def reduced():
+    yield from reduce(lambda state, step: step(state), [
         range(0, LIMIT),
         foo1,
         foo2,
         foo3
     ])
 
-def operator():
+def pipelined():
     yield from (Pipeline(range(0, LIMIT))
                 >> foo1
                 >> foo2
-                >> foo3)
+                >> foo3
+                >> list)
 
+def piped():
+    yield from (Pipe(range(0, LIMIT))
+                >> foo1
+                >> foo2
+                >> foo3
+                >> list)
 
-time(nested, pipelined, operator)
+def pipe3():
+    yield from (
+        range(0, LIMIT)
+        >> Pipelineable(foo1)
+        >> Pipelineable(foo2)
+        >> Pipelineable(foo3)
+    )
 
-# print(list(operator()))
+time(nested, reduced, pipelined, piped, pipe3)

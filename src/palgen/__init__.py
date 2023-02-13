@@ -3,8 +3,8 @@ import sys
 
 from colorama import init
 
-from palgen.loader import Loader
-from palgen.integrations.conan import Conan
+from palgen.palgen import Palgen
+from palgen.integrations.conan.recipe import Conan
 from palgen.util.log import setup_logger
 from palgen.cli import cli as main
 
@@ -12,8 +12,8 @@ init()
 setup_logger()
 
 
-__all__ = ['Loader', 'Conan', 'main']
-globals()['Project'] = Loader
+__all__ = ['Palgen', 'Conan', 'main']
+globals()['Project'] = Palgen
 
 def handle_exception(type_, value, trace):
     """Global exception handler.
