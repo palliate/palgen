@@ -17,10 +17,11 @@ class Toml(Ingest):
 
     def parse(self, path: Path):
         data = toml.load(path)
+        yield path, data
 
-        file_namespace = data.pop("namespace", None)
-        if isinstance(file_namespace, str):
-            file_namespace = file_namespace.split('.')
+        #file_namespace = data.pop("namespace", None)
+        #if isinstance(file_namespace, str):
+        #    file_namespace = file_namespace.split('.')
 
-        for namespace, name, value in compress(data, file_namespace):
-            yield path, ([*namespace, name], value)
+        #for namespace, name, value in compress(data, file_namespace):
+        #    yield path, ([namespace, name], value)

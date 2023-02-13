@@ -26,7 +26,9 @@ class Manifest(Loader):
         if isinstance(source_tree, list):
             for source in source_tree:
                 assert isinstance(source, Path)
-                assert source.is_dir()
+
+                if not source.is_dir():
+                    continue
 
                 for path in source.glob('**/palgen.manifest'):
                     yield from Manifest.load(Path(path))

@@ -1,7 +1,7 @@
 import traceback
 import logging
 from pathlib import Path
-from typing import Any, Iterator, Optional, Iterable, Type
+from typing import Any, Optional, Iterable, Type
 
 import click
 from jinja2 import Environment, FileSystemLoader
@@ -91,38 +91,41 @@ class Module:
             print_validationerror(ex)
             raise SystemExit(1) from ex
 
-    def validate(self, data: Iterable[tuple[Path, Any]]) -> Iterator[tuple[Path, BaseModel | Any]]:
-        for meta, value in data:
+    def transform(self, data: Iterable[tuple[Path, Any]]) -> Iterable[tuple[Path, Any]]:
+        yield from data
+
+    def validate(self, data: Iterable[tuple[Path, Any]]) -> Iterable[tuple[Path, BaseModel | Any]]:
+        for path, value in data:
             try:
-                yield meta, self.Schema.parse_obj(value)
+                yield path, self.Schema.parse_obj(value)
             except ValidationError as ex:
-                logger.warning("%s failed verification.", meta)
+                logger.warning("%s failed verification.", path)
                 print_validationerror(ex)
 
-    def render(self, data: Iterator[tuple[Path, BaseModel | Any]]) -> Iterable[tuple[Path, str]]:
+    def render(self, data: Iterable[tuple[Path, BaseModel | Any]]) -> Iterable[tuple[Path, str]]:
         """Render the prepared data.
 
         Args:
-            data (Iterator[tuple[str, Meta, BaseModel]]): Generator producing
+            data (Iterable[tuple[str, Meta, BaseModel]]): Generator producing
                 full name, meta information and verifies data against our schema
 
         Yields:
-            Iterator[tuple[Path, str]]: Yields relative output path and content for generated files
+            Iterable[tuple[Path, str]]: Yields relative output path and content for generated files
         """
 
         return
         # pylint: disable=unreachable
         yield Path(), ""  # type: ignore [unreachable]
 
-    def write(self, output: Iterator[tuple[Path, str]]) -> Iterable[Path]:
+    def write(self, output: Iterable[tuple[Path, str]]) -> Iterable[Path]:
         """Write the rendered files back to disk.
 
         Args:
             out_path (Path): Root output path
-            output (Iterator[tuple[Path, str]]): Generator producing file content
+            output (Iterable[tuple[Path, str]]): Generator producing file content
 
         Yields:
-            Iterator[Path]: Paths of generated files
+            Iterable[Path]: Paths of generated files
         """
         for filename, generated in output:
             filename = self.out_path / filename
@@ -136,6 +139,7 @@ class Module:
     def run(self, source_tree: SuffixDict) -> list[Path]:
         output: list[Path] = list(Pipeline(source_tree)
                                   >> self.ingest
+                                  >> self.transform
                                   >> self.validate
                                   >> self.render
                                   >> self.write)
