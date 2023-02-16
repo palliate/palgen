@@ -78,9 +78,13 @@ class CommandLoader(click.Group):
 @click.option("-c", "--config",
               help="Path to project configuration.",
               default=Path.cwd() / "palgen.toml")
+@click.option('-v', "--version", help="Show palgen version", is_flag=True)
 @click.option("--extra-folders", default="")
 @click.pass_context
-def cli(ctx, debug: bool, config: Path, extra_folders: str):
+def cli(ctx, debug: bool, version: bool, config: Path, extra_folders: str):
+    if version:
+        print("TODO")
+        return
     if debug:
         # logging.getLogger(__package__).setLevel(logging.DEBUG)
         set_min_level(0)

@@ -1,5 +1,4 @@
 import logging
-from pathlib import Path
 from typing import Type, Iterable
 
 from palgen.loaders.manifest import Manifest
