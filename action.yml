@@ -18,7 +18,6 @@ runs:
       ssh-private-key: ${{ inputs.key }}
 
   - name: Install palgen
-    working-directory: build/palgen
     shell: bash
     run: |
       pip install git+ssh://git@github.com/palliate/palgen.git
