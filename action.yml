@@ -23,7 +23,6 @@ runs:
   - name: Install Conan
     shell: bash
     run: |
-      echo ${{ inputs.conan }}
       [[ "${{ inputs.conan }}" = true ]] && pip install conan --upgrade
 
   - name: Install palgen
