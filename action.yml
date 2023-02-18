@@ -21,7 +21,7 @@ runs:
       ssh-private-key: ${{ inputs.key }}
 
   - name: Install Conan
-    if: inputs.conan == true
+    if: ${{ inputs.conan == true }}
     shell: bash
     run: |
       pip install conan --upgrade
