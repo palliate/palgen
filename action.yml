@@ -4,6 +4,9 @@ inputs:
   key:
     description: Repository key - TODO delete once repository is public
     required: true
+  conan:
+    description: Install the optional conan dependency
+    required: false
 
 runs:
   using: "composite"
@@ -16,6 +19,13 @@ runs:
   - uses: webfactory/ssh-agent@v0.7.0
     with:
       ssh-private-key: ${{ inputs.key }}
+
+  - name: Install Conan
+    if: inputs.conan == true
+    shell: bash
+    run: |
+      pip install conan --upgrade
+      conan --version
 
   - name: Install palgen
     shell: bash
