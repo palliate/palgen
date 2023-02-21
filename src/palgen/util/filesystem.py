@@ -31,8 +31,9 @@ def gitignore(path: Path) -> set[Pattern]:
     if path.is_dir():
         path = path / '.gitignore'
 
-    if (probe := path).exists():
-        with open(probe, mode='r', encoding='utf-8') as file:
+    if path.exists():
+        logger.debug("Parsing `%s`", path)
+        with open(path, mode='r', encoding='utf-8') as file:
             return {re.compile(fnmatch.translate(line))
                     for line in file.read().splitlines()
                     if line}

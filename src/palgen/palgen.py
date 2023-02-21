@@ -12,7 +12,7 @@ from palgen.modules import Modules
 from palgen.schemas.root import RootSettings
 from palgen.schemas.project import ProjectSettings
 from palgen.schemas.palgen import PalgenSettings
-
+from palgen.loaders.manifest import Manifest
 from palgen.util.filesystem import SuffixDict, gitignore
 
 logger = logging.getLogger(__name__)
@@ -76,7 +76,7 @@ class Palgen:
             from palgen.integrations.conan.dependencies import get_paths
             self.options.modules.extra_folders = get_paths(self.root)
 
-        return Modules(self.options.modules, self.files)
+        return Modules(self.project, self.options.modules, self.files)
 
     @cached_property
     def subprojects(self) -> dict[str, Palgen]:
@@ -104,14 +104,14 @@ class Palgen:
         generated: list[Path] = []
         for template, settings in self.settings.items():
             if template not in self.modules.runnables:
-                if template not in ('project', 'template'):
+                if template not in ('palgen', 'project'):
                     logger.warning("Module `%s` not found.", template)
                 continue
 
             if parser := self.modules.runnables[template]:
 
                 module = parser(self.root, self.output, settings)
-                logger.info("Rendering template `%s`", module.name)
+                logger.info("Running module `%s`", module.name)
                 try:
                     generated.extend(module.run(self.files))
                 except Exception as exception:
@@ -124,15 +124,7 @@ class Palgen:
         logger.info("Generated %d files.", len(generated))
 
     def generate_manifest(self, basepath: Optional[Path] = None):
-        modules = []
-        for name, module in self.modules.exportables.items():
-            path = module.path
-            if basepath and module.path.is_relative_to(basepath):
-                path = module.path.relative_to(basepath)
-
-            modules.append({'name': name, 'path': str(path)})
-
-        return toml.dumps({'modules': modules})
+        return Manifest.generate(self.modules, basepath)
 
     def __eq__(self, other) -> bool:
         if isinstance(other, Path):

@@ -1,6 +1,8 @@
 """ Conan integration. To automatically enable palgen for a conan projects
  derive the conan schema from the Conan class defined in this module"""
 
+#! TODO experimental
+
 from pathlib import Path
 
 from conan import ConanFile

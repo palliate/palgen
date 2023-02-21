@@ -6,8 +6,7 @@ macro(palgen_setup)
                     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
                     RESULT_VARIABLE PALGEN_CONF_RESULT)
     if(NOT PALGEN_CONF_RESULT EQUAL "0")
-        message(PALGEN_CONF_RESULT)
-        message(FATAL_ERROR "Palgen did not run successfully")
+        message(FATAL_ERROR "Palgen did not run successfully. Return value ${PALGEN_CONF_RESULT}")
     endif()
 
     # load project information

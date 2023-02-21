@@ -70,7 +70,7 @@ class Module:
             for field, attribute in cls.Settings.__fields__.items():
                 options = {'type': attribute.type_,
                            'required': attribute.required,
-                           'help' : ""} #TODO option help texts
+                           'help': ""}  # TODO option help texts
 
                 if attribute.type_ is bool:
                     options['help'] = f"[flag] {options['help']}"
@@ -133,7 +133,7 @@ class Module:
             with open(filename, "w+", encoding="utf8") as file:
                 file.write(generated)
 
-            logger.debug("Generated %s", filename)
+            logger.debug("Generated `%s`", filename)
             yield filename
 
     def run(self, source_tree: SuffixDict) -> list[Path]:
@@ -143,8 +143,10 @@ class Module:
                                   >> self.validate
                                   >> self.render
                                   >> self.write)
-
-        logger.info("%s yielded %s", self.name, output)
+        logger.info("Module `%s` yielded %s file%s",
+                    self.name,
+                    len(output),
+                    's' if len(output) > 1 else '')
         return output
 
     def get_template(self, name: str, **kwargs):

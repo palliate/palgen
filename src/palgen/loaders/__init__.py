@@ -4,18 +4,17 @@ from typing import Type
 from abc import abstractmethod
 
 from palgen.util.filesystem import SuffixDict
-
+from palgen.schemas.project import ProjectSettings
 
 class Loader:
-
     @staticmethod
     @abstractmethod
-    def ingest(source_tree: SuffixDict):
+    def ingest(project: ProjectSettings, source_tree: SuffixDict):
         pass
 
     @staticmethod
     @abstractmethod
-    def load(path: Path):
+    def load(project: ProjectSettings, path: Path):
         pass
 
 

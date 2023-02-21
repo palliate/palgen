@@ -18,7 +18,7 @@ def init_context(ctx, config: str | Path = Path.cwd()):
         config /= "palgen.toml"
 
     if not config.exists():
-        return
+        raise FileNotFoundError("palgen.toml not found")
 
     ctx.obj = Palgen(config)
 
@@ -97,6 +97,8 @@ def cli(ctx, debug: bool, version: bool, config: Path, extra_folders: str):
         ctx.obj.options.modules.extra_folders = paths
 
     if ctx.invoked_subcommand is None:
+        assert isinstance(ctx.obj, Palgen)
+
         # no subcommand - run all enabled templates
         ctx.obj.run()
 

@@ -1,27 +1,30 @@
 import logging
 from typing import Type, Iterable
+from pathlib import Path
 
 from palgen.loaders.manifest import Manifest
 from palgen.loaders.python import Python
 from palgen.module import Module
 from palgen.schemas.palgen import ModuleSettings
+from palgen.schemas.project import ProjectSettings
 from palgen.util.filesystem import SuffixDict
 
 logger = logging.getLogger(__name__)
 
 
 class Modules:
-    def __init__(self, settings: ModuleSettings, file_cache: SuffixDict) -> None:
+    def __init__(self, project: ProjectSettings, settings: ModuleSettings, file_cache: SuffixDict) -> None:
         self.private: dict[str, Type[Module]] = {}
         self.public: dict[str, Type[Module]] = {}
+        #TODO namespaces
 
         if settings.inherit:
             logger.debug("Loading manifests")
-            self._extend(Manifest.ingest(settings.extra_folders))
+            self._extend(Manifest.ingest(project, settings.extra_folders))
 
         if settings.python:
             logger.debug("Loading Python modules")
-            self._extend(Python.ingest(file_cache))
+            self._extend(Python.ingest(project, file_cache))
 
     def _extend(self, modules: Iterable[tuple[str, Type[Module]]]):
         for name, module in modules:
