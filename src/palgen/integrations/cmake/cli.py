@@ -34,8 +34,8 @@ def cli(ctx, outpath, toolchain, project):
         out.parent.mkdir(parents=True, exist_ok=True)
 
         text = f"""
-SET(PALGEN_PROJECT "{settings.name}")
-SET(PALGEN_VERSION "{settings.version}")"""
+SET(TARGET "{settings.name}")
+SET(TARGET_VERSION "{settings.version}")"""
 
         with open(out, "w", encoding="utf-8") as file:
             file.write(text)
