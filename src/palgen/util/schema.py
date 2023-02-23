@@ -1,5 +1,6 @@
 import logging
 from pydantic import BaseModel, ValidationError
+from typing import get_origin, get_args, get_type_hints, Annotated
 
 logger = logging.getLogger(__name__)
 
@@ -21,3 +22,37 @@ def print_validationerror(exception: ValidationError):
         for loc in error["loc"]:
             logger.warning("  %s", loc)
         logger.warning("    %s (type=%s)", error["msg"], error["type"])
+
+
+def extract_help(hint) -> str:
+    if get_origin(hint) is not Annotated:
+        return ""
+
+    _, *args = get_args(hint)
+
+    if len(args) > 1 or not isinstance(args[0], str):
+        return ""
+
+    return args[0]
+
+
+def pydantic_to_click(cls):
+    hints = get_type_hints(cls, include_extras=True)
+
+    for key, field in getattr(cls, "__fields__").items():
+        options = {
+            'type': field.type_, #TODO possible bug, check list[str]
+            'required': field.required,
+            'help': ""
+        }
+
+        if hint := hints.get(key):
+            options['help'] = extract_help(hint)
+
+        if not field.required:
+            options['default'] = field.default
+
+        if field.type_ is bool:
+            options['is_flag'] = True
+
+        yield key, options

@@ -5,7 +5,7 @@ from typing import Iterable
 import toml
 
 from palgen.ingest import Ingest
-from palgen.util.transformations import compress
+#from palgen.util.transformations import compress
 
 logger = logging.getLogger(__name__)
 

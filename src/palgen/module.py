@@ -12,7 +12,7 @@ from palgen.ingest.toml import Toml
 
 from palgen.util import Pipeline, setattr_default
 from palgen.util.filesystem import SuffixDict
-from palgen.util.schema import check_schema_attribute, print_validationerror
+from palgen.util.schema import check_schema_attribute, print_validationerror, pydantic_to_click
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +58,9 @@ class Module:
         ))
 
         if not hasattr(cls, "cli"):
-            @click.command(name=cls.name, help=cls.__doc__)
+            @click.command(name=cls.name,
+                           help=cls.__doc__,
+                           context_settings={'show_default': True})
             @click.pass_context
             def cli(ctx, **kwargs):
                 settings = ctx.obj.settings.get(cls.name, {})
@@ -67,15 +69,7 @@ class Module:
                 parser = cls(ctx.obj.root, ctx.obj.root, settings)
                 parser.run(ctx.obj.files)
 
-            for field, attribute in cls.Settings.__fields__.items():
-                options = {'type': attribute.type_,
-                           'required': attribute.required,
-                           'help': ""}  # TODO option help texts
-
-                if attribute.type_ is bool:
-                    options['help'] = f"[flag] {options['help']}"
-                    options['is_flag'] = True
-
+            for field, options in pydantic_to_click(cls.Settings):
                 cli = click.option(f'--{field}', **options)(cli)
 
             setattr(cls, "cli", cli)
