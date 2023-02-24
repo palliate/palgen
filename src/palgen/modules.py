@@ -19,11 +19,11 @@ class Modules:
         #TODO namespaces
 
         if settings.inherit:
-            logger.debug("Loading manifests")
+            logger.info("Loading manifests")
             self._extend(Manifest.ingest(project, settings.extra_folders))
 
         if settings.python:
-            logger.debug("Loading Python modules")
+            logger.info("Loading Python modules")
             self._extend(Python.ingest(project, file_cache))
 
     def _extend(self, modules: Iterable[tuple[str, Type[Module]]]):
