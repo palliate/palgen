@@ -67,9 +67,7 @@ def test_import_builtins():
     # this must succeed even for empty files
     with mock_file(""):
         ast = AST.load(MOCK_PATH)
-        # ast.has_import(str)
-        # TODO
-        assert True
+        #TODO
 
 
 @pytest.mark.parametrize('import_,symbol', [

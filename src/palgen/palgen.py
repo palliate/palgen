@@ -95,10 +95,7 @@ class Palgen:
 
     def _path_for(self, folder: str | Path) -> Path:
         path = Path(folder)
-        if path.is_absolute():
-            return path
-
-        return self.root / path
+        return path if path.is_absolute() else self.root / path
 
     def run(self):
         generated: list[Path] = []

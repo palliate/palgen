@@ -15,9 +15,7 @@ class Import:
 
     @property
     def name(self):
-        if self.alias:
-            return self.alias
-        return self._name
+        return self.alias or self._name
 
     @property
     def real_name(self):
@@ -36,9 +34,7 @@ class Import:
         else:
             ret += f"import {'.'.join(self.module)}"
 
-        if self.alias:
-            return f"{ret} as {self.alias}"
-        return ret
+        return f"{ret} as {self.alias}" if self.alias else ret
 
 
 class Class:
@@ -80,6 +76,7 @@ class Class:
         '''
         return node.id
 
+
 def get_import_name(import_: type | ModuleType) -> tuple[list[str], Optional[str]]:
     # TODO use __qualname__ (dotted full name)
     if isinstance(import_, type):
@@ -115,8 +112,7 @@ class AST:
         Args:
             tree (ast.Module): Module to inspect
         """
-        if not isinstance(tree, ast.Module):
-            raise TypeError("Tree is not of type ast.Module")
+        assert isinstance(tree, ast.Module), "Tree is not of type ast.Module"
 
         self.tree = tree
 
@@ -270,22 +266,22 @@ class AST:
                 if import_part != search_part:
                     break
             else:
-                if idx + 1 != len(import_.module):
+                idx += 1
+                if idx != len(import_.module):
                     continue
 
-                remainder = module[idx + 1:]
+                remainder = module[idx:]
 
                 if import_.real_name:
                     if remainder and remainder[0] == import_.real_name:
+                        # from foo import module
                         del remainder[0]
-                else:
-                    if not import_.alias:
-                        # no name means module import => prepend module if not aliased
-                        remainder = import_.module + remainder
-
+                elif not import_.alias:
+                    # no name means module import => prepend module if not aliased
+                    remainder = import_.module + remainder
 
                 if import_.real_name != name:
-                    # add name to import
+                    # from foo import class
                     remainder.append(name)
 
                 if not import_.name:

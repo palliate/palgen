@@ -89,7 +89,7 @@ def piped():
 
 def pipe3():
     yield from (
-        range(0, LIMIT)
+        range(LIMIT)
         >> Pipelineable(foo1)
         >> Pipelineable(foo2)
         >> Pipelineable(foo3)

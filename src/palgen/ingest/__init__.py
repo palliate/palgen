@@ -6,6 +6,7 @@ from abc import abstractmethod
 from typing import Iterable, Any, Optional
 from palgen.util.filesystem import SuffixDict
 
+
 """
 @dataclass
 class Meta:
@@ -46,7 +47,7 @@ class Ingest:
     def ingest(self, files: Iterable[Path]) -> Iterable[tuple[Path, Any]]:
         raise NotImplementedError
 
-        # pylint: disable=unreachable
+        # sourcery skip: remove-unreachable-code; pylint: disable=unreachable
         yield # type: ignore [unreachable]
 
     def __call__(self, file_cache: SuffixDict) -> Iterable[tuple[Path, Any]]:
@@ -55,6 +56,5 @@ class Ingest:
 class Nothing(Ingest):
     def ingest(self, files: Iterable[Path]) -> Iterable[tuple[Path, Any]]:
         return
-
-        # pylint: disable=unreachable
+        # sourcery skip: remove-unreachable-code; pylint: disable=unreachable
         yield # type: ignore [unreachable]

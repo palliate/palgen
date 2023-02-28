@@ -8,4 +8,4 @@ class ProjectSettings(BaseModel):
     description: Optional[str] = ""
 
     output: Optional[str] = None
-    folders: list[str] = list()
+    folders: list[str] = []

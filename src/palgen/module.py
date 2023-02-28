@@ -106,9 +106,14 @@ class Module:
         Yields:
             Iterable[tuple[Path, str]]: Yields relative output path and content for generated files
         """
+        # Yes yes, this is intended.
+        # despite yield being unreachable its existence will set the CO_GENERATOR flag
+        # hence making this a generator
+
+        # it's ugly but it stops some linters from crying
 
         return
-        # pylint: disable=unreachable
+        # sourcery skip: remove-unreachable-code; pylint: disable=unreachable
         yield Path(), ""  # type: ignore [unreachable]
 
     def write(self, output: Iterable[tuple[Path, str]]) -> Iterable[Path]:
