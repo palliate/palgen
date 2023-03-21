@@ -4,7 +4,6 @@ import sys
 from colorama import init
 
 from palgen.palgen import Palgen
-from palgen.integrations.conan.recipe import Conan
 from palgen.util.log import setup_logger
 from palgen.cli import cli as main
 
@@ -12,8 +11,7 @@ init()
 setup_logger()
 
 
-__all__ = ['Palgen', 'Conan', 'main']
-globals()['Project'] = Palgen
+__all__ = ['Palgen', 'main']
 
 def handle_exception(type_, value, trace):
     """Global exception handler.

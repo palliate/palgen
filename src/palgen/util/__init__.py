@@ -7,6 +7,12 @@ class Pipeline:
         self.steps = [state] if state is not None else []
 
     def __rshift__(self, step):
+        if isinstance(step, type):
+            try:
+                step = step()
+            except TypeError as exc:
+                raise ValueError("Type in pipeline is not default constructible") from exc
+
         self.steps.append(step)
         return self
 

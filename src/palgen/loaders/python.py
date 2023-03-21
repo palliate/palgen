@@ -35,6 +35,9 @@ class Python(Loader):
             if not ast.constants.get('_PUBLIC', False):
                 module_name.append(str(uuid.uuid4()))
         else:
+            if path.name.startswith('_'):
+                return
+
             if (probe := path.parent / '__init__.py').exists():
                 # TODO cache this
                 init_ast = AST.load(probe)

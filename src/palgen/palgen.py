@@ -70,11 +70,11 @@ class Palgen:
 
     @cached_property
     def modules(self) -> Modules:
-        if not self.options.modules.extra_folders:
-            # disable conan integration when extra dirs are provided
+        #if not self.options.modules.extra_folders:
+        #    # disable conan integration when extra dirs are provided
 
-            from palgen.integrations.conan.dependencies import get_paths
-            self.options.modules.extra_folders = get_paths(self.root)
+        #    from palgen.integrations.conan.dependencies import get_paths
+        #    self.options.modules.extra_folders = get_paths(self.root)
 
         return Modules(self.project, self.options.modules, self.files)
 

@@ -1,20 +1,7 @@
 import timeit
-from functools import reduce
-
-
-def foo1(bar):
-    for i in bar:
-        yield i + 1
-
-
 def foo2(bar):
     for i in bar:
-        yield 10 + i
-
-
-def foo3(bar):
-    for i in bar:
-        yield 'foo3:' + str(i)
+        yield 11 + i
 
 
 def wrap(f):
@@ -31,68 +18,63 @@ def time(*funcs):
         print(
             f'Average after {RUNS} runs: {func.__name__} {avg_duration} seconds')
 
+from functools import reduce
+from pprint import pprint
 
 class Pipeline:
     def __init__(self, state=None):
         self.steps = [state] if state is not None else []
 
     def __rshift__(self, step):
+        if isinstance(step, type):
+            try:
+                step = step()
+            except TypeError as exc:
+                raise ValueError("Type in pipeline is not default constructible") from exc
+
         self.steps.append(step)
         return self
 
     def __iter__(self):
+        print(self)
         yield from reduce(lambda state, step: step(state), self.steps)
 
+    def __call__(self, state):
+        self.steps = [state, *self.steps]
+        yield from self
 
-class Pipe:
-    def __init__(self, step, next=None):
-        self.step = step
-        self.next = next
 
-    def __rshift__(self, step):
-        return Pipe(self, step)
+def zoinkers(bar):
+    for i in bar:
+        yield i * 2
 
-    def __iter__(self):
-        yield from self.next(self.step) if self.next is not None else self.step
+class Foinkers(Pipeline):
+    def __call__(self, data):
+        for i in data:
+            if i > 4:
+                yield i
 
-class Pipelineable:
-    def __init__(self, task):
-        self.task = task
+def boinkers(bar):
+    for i in bar:
+        yield f'stringified:{str(i)}'
 
-    def __rrshift__(self, x):
-        return self.task(x)
+foo = Foinkers(range(10)) >> zoinkers >> Foinkers >> boinkers
+pprint(list(foo))
 
-def nested():
-    yield from foo3(foo2(foo1(range(0, LIMIT))))
 
-def reduced():
-    yield from reduce(lambda state, step: step(state), [
-        range(0, LIMIT),
-        foo1,
-        foo2,
-        foo3
-    ])
+class Singledong( (ohno := [], object)[1] ):
+    def __new__(cls, *_):
+        if ohno:
+            return ohno[0]
+        return (instance := super(Singledong, cls).__new__(cls),
+                ohno.append(instance))[0]
 
-def pipelined():
-    yield from (Pipeline(range(0, LIMIT))
-                >> foo1
-                >> foo2
-                >> foo3
-                >> list)
+    def __init__(self, bar):
+        self.bar = bar
 
-def piped():
-    yield from (Pipe(range(0, LIMIT))
-                >> foo1
-                >> foo2
-                >> foo3
-                >> list)
 
-def pipe3():
-    yield from (
-        range(LIMIT)
-        >> Pipelineable(foo1)
-        >> Pipelineable(foo2)
-        >> Pipelineable(foo3)
-    )
+def foo(bar = (ohno := 3)):
+    print(bar)
 
-time(nested, reduced, pipelined, piped, pipe3)
+print(ohno)
+foo()
