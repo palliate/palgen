@@ -27,6 +27,8 @@ class Module:
     ingest: Type[Ingest]
     private: bool
 
+    module: str # this will be set by the loader
+
     @classmethod
     def __init_subclass__(cls, *,
                           name: Optional[str] = None,

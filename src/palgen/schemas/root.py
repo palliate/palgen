@@ -5,7 +5,7 @@ from pydantic import BaseModel, root_validator
 class RootSettings(BaseModel):
     __root__: dict[Any, Any]
 
-    @root_validator(pre=True)
+    @root_validator(pre=True, allow_reuse=True)
     @classmethod
     def validate(cls, value):
         settings = value.get("__root__")

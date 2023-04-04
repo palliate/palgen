@@ -1,9 +1,11 @@
 import ast
-from typing import Any, Optional
-from types import ModuleType
-from pathlib import Path
+import logging
 from functools import singledispatchmethod
+from pathlib import Path
+from types import ModuleType
+from typing import Any, Optional
 
+logger = logging.getLogger(__name__)
 
 class Import:
     def __init__(self, name: Optional[str] = None,
@@ -154,8 +156,8 @@ class AST:
 
         if not isinstance(node, ast.AST):
             raise NotImplementedError
-        # handle unrecognized nodes
-        print(f"Unparsed node: {node}")
+
+        # do nothing with unrecognized nodes
 
     @visit.register
     def _(self, node: ast.Module):

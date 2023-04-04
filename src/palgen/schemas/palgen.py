@@ -7,7 +7,8 @@ class ModuleSettings(BaseModel):
     # inherit modules from other projects
     inherit: bool = True
     # extra paths to check for modules
-    extra_folders: list[Path] = list()
+    extra_folders: list[Path] = []
+    dependencies: Optional[Path] = None
 
     # Loaders
     #toml: bool = False  # not implemented
@@ -17,5 +18,5 @@ class ModuleSettings(BaseModel):
 
 class PalgenSettings(BaseModel):
     output: Optional[str] = None
-    folders: list[str] = list()
+    folders: list[str] = []
     modules: ModuleSettings = ModuleSettings()

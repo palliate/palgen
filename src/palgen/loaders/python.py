@@ -2,6 +2,7 @@ import sys
 import logging
 import uuid
 from importlib.util import spec_from_file_location, module_from_spec
+from typing import Optional
 
 from pathlib import Path
 from palgen.loaders import Loader
@@ -18,41 +19,54 @@ logger = logging.getLogger(__name__)
 class Python(Loader):
 
     @staticmethod
-    def ingest(project: ProjectSettings, source_tree: SuffixDict):
-        files = Filter(extension='.py')(source_tree)
+    def ingest(sources: SuffixDict, project: Optional[ProjectSettings] = None):
+        files = Filter(extension='.py')(sources)
 
         for file in files:
-            yield from Python.load(project, file)
+            yield from Python.load(file, project=project)
 
     @staticmethod
-    def load(project: ProjectSettings, path: Path):
+    def parse_init(path: Path, module_name: list[str]):
+        #TODO cache this
         ast = AST.load(path)
-        module_name = ["palgen", "ext", project.name]
+        module_name.append(ast.constants.get('_NAME', path.parent.name))
+        if not ast.constants.get('_PUBLIC', False):
+            module_name.append(str(uuid.uuid4()))
+        return module_name
 
-        # TODO
-        if path.name == '__init__.py':
-            module_name.append(ast.constants.get('_NAME', path.parent.name))
-            if not ast.constants.get('_PUBLIC', False):
-                module_name.append(str(uuid.uuid4()))
-        else:
-            if path.name.startswith('_'):
-                return
+    @staticmethod
+    def load(path: Path, project: Optional[ProjectSettings] = None, import_name: Optional[str] = None):
+        if project is not None and import_name is not None:
+            raise RuntimeError("expected project or import_name, not both.")
 
-            if (probe := path.parent / '__init__.py').exists():
-                # TODO cache this
-                init_ast = AST.load(probe)
-                if not init_ast.constants.get('_PUBLIC', False):
-                    module_name.append(str(uuid.uuid4()))
-                module_name.append(init_ast.constants.get(
-                    '_NAME', path.parent.name))
+        if path.name.startswith('_'):
+            # TODO figure out if we need to load __init__.py
+            return
 
-            module_name.append(path.stem)
 
+        ast = AST.load(path)
         if not any(ast.get_subclasses(Module)):
             logger.debug("%s does not contain Module subclasses", path)
 
+        module_name: list[str] = ["palgen", "ext"]
+        if project is not None:
+            module_name.append(project.name)
+
+            if (probe := path.parent / '__init__.py').exists():
+                module_name = Python.parse_init(probe, module_name)
+
+            module_name.append(path.stem)
+
+        elif import_name is not None:
+            module_name.extend(import_name.split('.'))
+
+        else:
+            # no way to avoid conflicts, make this private
+            module_name.append(str(uuid.uuid4()))
+
+
         name = '.'.join(module_name)
-        logging.info("Adding to sys.modules: %s", name)
+        logger.debug("Adding to sys.modules: %s", name)
         spec = spec_from_file_location(name, path)
 
         # file is pre-checked, these assertions should never fail
@@ -63,9 +77,9 @@ class Python(Loader):
         sys.modules[name] = module
         spec.loader.exec_module(module)
 
-        attrs = [getattr(module, name)
-                 for name in dir(module)
-                 if not name.startswith('_')]
+        attrs = [getattr(module, attr_name)
+                 for attr_name in dir(module)
+                 if not attr_name.startswith('_')]
 
         for attr in attrs:
             if not isinstance(attr, type):
@@ -73,7 +87,8 @@ class Python(Loader):
             if not issubclass(attr, Module) or attr is Module:
                 continue
 
-            attr_name = attr.__name__.lower()
-            logger.debug(
-                "Found module `%s` (importable from `%s`)", attr_name, name)
-            yield attr_name, attr
+            attr.module = '.'.join(module_name[2:])
+            logger.debug("Found module `%s` (importable from `%s`). Key `%s`",
+                         attr.__name__, name, attr.name)
+
+            yield attr.name, attr

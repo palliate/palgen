@@ -1,6 +1,7 @@
 import importlib
 import logging
 from pathlib import Path
+from typing import Optional
 
 import click
 
@@ -61,7 +62,6 @@ class CommandLoader(click.Group):
 
         return None
 
-
     @staticmethod
     def _load_builtin(name):
         try:
@@ -73,6 +73,7 @@ class CommandLoader(click.Group):
             pass
         return None
 
+
 @click.command(cls=CommandLoader, chain=True, invoke_without_command=True)
 @click.option('--debug/--no-debug', default=False)
 @click.option("-c", "--config",
@@ -80,8 +81,9 @@ class CommandLoader(click.Group):
               default=Path.cwd() / "palgen.toml")
 @click.option('-v', "--version", help="Show palgen version", is_flag=True)
 @click.option("--extra-folders", default="")
+@click.option("--dependencies", default=None, type=Path)
 @click.pass_context
-def cli(ctx, debug: bool, version: bool, config: Path, extra_folders: str):
+def cli(ctx, debug: bool, version: bool, config: Path, extra_folders: str, dependencies: Optional[Path]):
     if version:
         print("TODO")
         return
@@ -95,6 +97,9 @@ def cli(ctx, debug: bool, version: bool, config: Path, extra_folders: str):
     if extra_folders:
         paths = [Path(path) for path in extra_folders.split(';')]
         ctx.obj.options.modules.extra_folders = paths
+
+    if dependencies:
+        ctx.obj.options.modules.dependencies = dependencies
 
     if ctx.invoked_subcommand is None:
         assert isinstance(ctx.obj, Palgen)
@@ -122,6 +127,7 @@ Subprojects: {list(ctx.obj.subprojects.keys())}"""
 
     print(text)
 
+
 @cli.command()
 @click.option("-o", "--output", help="Output path", type=Path, required=True)
 @click.option("-r", "--relative", help="Output relative paths instead of absolute ones.", is_flag=True)
@@ -134,7 +140,8 @@ def generate_manifest(ctx, output: Path, relative: bool):
     output.parent.mkdir(exist_ok=True)
 
     # TODO generate sane relative paths. I don't like the current way but it's fine for now
-    manifest = ctx.obj.generate_manifest(output.parent.absolute() if relative else None)
+    manifest = ctx.obj.generate_manifest(
+        output.parent.absolute() if relative else None)
 
     with open(output, 'w', encoding="utf-8") as file:
         file.write(manifest)

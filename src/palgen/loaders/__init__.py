@@ -1,6 +1,6 @@
 import importlib
 from pathlib import Path
-from typing import Type
+from typing import Type, Optional
 from abc import abstractmethod
 
 from palgen.util.filesystem import SuffixDict
@@ -9,12 +9,12 @@ from palgen.schemas.project import ProjectSettings
 class Loader:
     @staticmethod
     @abstractmethod
-    def ingest(project: ProjectSettings, source_tree: SuffixDict):
+    def ingest(sources: SuffixDict):
         pass
 
     @staticmethod
     @abstractmethod
-    def load(project: ProjectSettings, path: Path):
+    def load(path: Path):
         pass
 
 

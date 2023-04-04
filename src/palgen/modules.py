@@ -20,11 +20,14 @@ class Modules:
 
         if settings.inherit:
             logger.info("Loading manifests")
-            self._extend(Manifest.ingest(project, settings.extra_folders))
+            self._extend(Manifest.ingest(settings.extra_folders))
+
+            if settings.dependencies:
+                self._extend(Manifest.load(settings.dependencies))
 
         if settings.python:
             logger.info("Loading Python modules")
-            self._extend(Python.ingest(project, file_cache))
+            self._extend(Python.ingest(file_cache, project=project))
 
     def _extend(self, modules: Iterable[tuple[str, Type[Module]]]):
         for name, module in modules:
