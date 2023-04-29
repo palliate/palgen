@@ -7,6 +7,7 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
+
 class Import:
     def __init__(self, name: Optional[str] = None,
                  module: Optional[list[str]] = None,
@@ -235,11 +236,10 @@ class AST:
     def _(self, node: ast.ImportFrom):
         ''' ImportFrom(identifier? module, alias* names, int? level) '''
         for name in node.names:
-            for name in node.names:
-                self.imports.append(Import(name=name.name,
-                                           module=node.module.split(
-                                               '.') if node.module else None,
-                                           alias=name.asname))
+            self.imports.append(Import(name=name.name,
+                                       module=node.module.split(
+                                           '.') if node.module else None,
+                                       alias=name.asname))
 
     @visit.register
     def _(self, node: ast.ClassDef):

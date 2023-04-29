@@ -60,21 +60,3 @@ def boinkers(bar):
 
 foo = Foinkers(range(10)) >> zoinkers >> Foinkers >> boinkers
 pprint(list(foo))
-
-
-class Singledong( (ohno := [], object)[1] ):
-    def __new__(cls, *_):
-        if ohno:
-            return ohno[0]
-        return (instance := super(Singledong, cls).__new__(cls),
-                ohno.append(instance))[0]
-
-    def __init__(self, bar):
-        self.bar = bar
-
-
-def foo(bar = (ohno := 3)):
-    print(bar)
-
-print(ohno)
-foo()

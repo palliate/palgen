@@ -24,7 +24,7 @@ class Module:
     environment: Environment
     path: Path
     name: str
-    ingest: Type[Ingest]
+    ingest: Type[Ingest] | Ingest
     private: bool
 
     module: str # this will be set by the loader
