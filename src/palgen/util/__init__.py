@@ -1,12 +1,12 @@
 from functools import reduce
-from typing import Any
+from typing import Any, Iterable, Optional
 
 
 class Pipeline:
-    def __init__(self, state=None):
+    def __init__(self, state: Optional[Any] = None):
         self.steps = [state] if state is not None else []
 
-    def __rshift__(self, step):
+    def __rshift__(self, step) -> 'Pipeline':
         if isinstance(step, type):
             try:
                 step = step()
@@ -16,7 +16,7 @@ class Pipeline:
         self.steps.append(step)
         return self
 
-    def __iter__(self):
+    def __iter__(self) -> Iterable[Any]:
         yield from reduce(lambda state, step: step(state), self.steps)
 
 
