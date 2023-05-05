@@ -11,12 +11,23 @@ on:
 
 jobs:
   build:
+    name: Build (python-${{ matrix.python-version }}, ${{ matrix.os }})
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        os:
+          - macos-11
+          - macos-12
+          - macos-latest
+          - ubuntu-20.04
+          - ubuntu-22.04
+          - ubuntu-latest
+          - windows-2019
+          - windows-2022
+          - windows-latest
+        python-version: ["3.10", "3.11"]
 
     steps:
     - uses: actions/checkout@v3
@@ -43,14 +54,24 @@ jobs:
         path: dist/*
 
   test:
-    name: "Publish Test Results"
+    name: Build (python-${{ matrix.python-version }}, ${{ matrix.os }})
     needs: build
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11"]
+        os:
+          - macos-11
+          - macos-12
+          - macos-latest
+          - ubuntu-20.04
+          - ubuntu-22.04
+          - ubuntu-latest
+          - windows-2019
+          - windows-2022
+          - windows-latest
+        python-version: ["3.10", "3.11"]
 
     steps:
       - uses: actions/checkout@v3
@@ -76,11 +97,6 @@ jobs:
       - name: Install package
         run: pip install dist/palgen*.tar.gz
       
-      - name: Lint with flake8
-        run: |
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-
       - name: Test with pytest
         run: pytest --capture=tee-sys --continue-on-collection-errors --junit-xml pytest.xml
       
@@ -90,6 +106,30 @@ jobs:
         with:
           name: Test Results (Python ${{ matrix.python-version }})
           path: pytest.xml
+  lint:
+    name: "Lint"
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Set up Python 
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements_dev.txt
+
+      - name: Lint with flake8
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
   publish-test-results:
     name: "Publish Test Results"
