@@ -40,9 +40,12 @@ jobs:
     
     - name: Build package
       run: python -m build
+    
+    - name: Install package
+      run: python -e .
+
     - name: Test with pytest
-      run: |
-        pytest --junitxml=test_results.xml
+      run: pytest --junitxml=test_results.xml
     
     - name: Publish Test Results
       uses: EnricoMi/publish-unit-test-result-action@v2
