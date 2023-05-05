@@ -42,7 +42,7 @@ jobs:
       run: python -m build
     
     - name: Install package
-      run: python -e .
+      run: pip install -e .
 
     - name: Test with pytest
       run: pytest --junitxml=test_results.xml
