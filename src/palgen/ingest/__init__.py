@@ -40,9 +40,6 @@ class Filter:
         yield from file_cache.by_name(f"{self.name}{self.extension}")
 
 class Ingest:
-    def __init__(self, filter_: Filter):
-        self.filter = filter_
-
     @abstractmethod
     def ingest(self, files: Iterable[Path]) -> Iterable[tuple[Path, Any]]:
         raise NotImplementedError
@@ -51,7 +48,7 @@ class Ingest:
         yield # type: ignore [unreachable]
 
     def __call__(self, file_cache: SuffixDict) -> Iterable[tuple[Path, Any]]:
-        return self.ingest(self.filter(file_cache))
+        yield from self.ingest(file_cache)
 
 class Nothing(Ingest):
     def ingest(self, files: Iterable[Path]) -> Iterable[tuple[Path, Any]]:

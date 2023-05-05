@@ -38,17 +38,6 @@ class ToOrd:
             yield ord(datum)
 
 
-class FromString(Pipeline):
-    # TODO
-    def __init__(self, string: str):
-        self.string = string
-        super().__init__()
-
-    def __call__(self):
-        for character in self.string:
-            yield character
-
-
 def test_function():
     pipe = Pipeline(range(10)) >> odd >> square
     # 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
@@ -66,6 +55,13 @@ def test_functor():
     result = list(pipe)
     assert result == [0, 6, 12, 18, 24]
 
+def test_functor_type():
+    pipe = Pipeline(range(10)) >> Even >> MultiplyFactor(3)
+    # 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+    # 0, 2, 4, 6, 8
+    # 0, 6, 12, 18, 24
+    result = list(pipe)
+    assert result == [0, 6, 12, 18, 24]
 
 def test_mixed():
     pipe = Pipeline(range(10)) >> odd >> MultiplyFactor(3) >> square
@@ -76,12 +72,70 @@ def test_mixed():
     result = list(pipe)
     assert result == [9, 81, 225, 441, 729]
 
+def test_mixed_lazy():
+    pipe = Pipeline() >> odd >> MultiplyFactor(3) >> square
+    pipe2 = Pipeline >> odd >> MultiplyFactor(3) >> square
+    # 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+    # 1, 3, 5, 7, 9
+    # 3, 9, 15, 21, 27
+    # 9, 81, 225, 441, 729
+    for pipeline in pipe, pipe2:
+        result = list(pipeline(range(10)))
+        assert result == [9, 81, 225, 441, 729]
 
-def test_introducer():
-    pipe = FromString("asdf") >> ToOrd() >> Even() >> MultiplyFactor(.5)
+
+def test_string():
+    pipe = Pipeline("abcd") >> ToOrd() >> Even() >> MultiplyFactor(2)
     # 'a' 'b' 'c' 'd'
     # 97 98 99 100
     # 98 100
-    # 49 50
+    # 196 200
     result = list(pipe)
-    assert result == [49, 50]
+    assert result == [196, 200]
+
+def test_methods():
+
+    class Unrelated:
+        def triple(self, data):
+            assert not isinstance(self, Unrelated)
+
+            for datum in data:
+                yield datum * 3
+    class Foo:
+        def increment(self, data):
+            for datum in data:
+                yield datum + 1
+    class Bar(Foo):
+        def multiply(self, data):
+            for datum in data:
+                yield datum * 2
+        pipeline = Pipeline >> Foo.increment >> multiply >> Unrelated.triple
+
+        def run(self):
+            return list(self.pipeline(range(10), self))
+
+        def run_local(self):
+            pipeline = Pipeline >> self.increment >> self.multiply >> Unrelated.triple
+            return list(pipeline(range(10), self))
+
+    bar = Bar()
+    result = list(bar.pipeline(range(10), bar))
+
+    # 0,  1,  2,  3,  4,  5,  6,  7,  8,  9
+    # 1,  2,  3,  4,  5,  6,  7,  8,  9, 10
+    # 2,  4,  6,  8, 10, 12, 13, 16, 18, 20
+    # 6, 12, 18, 24, 30, 36, 42, 48, 54, 60
+    assert(result == [6, 12, 18, 24, 30, 36, 42, 48, 54, 60])
+    assert(bar.run() == [6, 12, 18, 24, 30, 36, 42, 48, 54, 60])
+    assert(bar.run_local() == [6, 12, 18, 24, 30, 36, 42, 48, 54, 60])
+
+def test_nested():
+    first = Pipeline >> odd >> MultiplyFactor(2)
+    second = Pipeline >> first >> square
+
+    result = list(second(range(10)))
+    # 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+    # 1, 3, 5, 7, 9
+    # 2, 6, 10, 14, 18
+    # 4, 36, 100, 196, 324
+    assert result == [4, 36, 100, 196, 324]

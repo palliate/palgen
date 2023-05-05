@@ -4,6 +4,7 @@ import re
 from collections import defaultdict
 from pathlib import Path
 from typing import Optional, Pattern
+from palgen.util import Pipeline
 
 logger = logging.getLogger(__name__)
 
@@ -89,3 +90,8 @@ class SuffixDict(defaultdict[str, defaultdict[str, list[Path]]]):
         if files := self.by_extension(name.suffix):
             return files.get(name.stem, [])
         return []
+
+class Sources(Pipeline):
+    def __call__(self, state: SuffixDict):
+        assert isinstance(state, SuffixDict)
+        yield from super().__call__(state)
