@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
 
     steps:
     - uses: actions/checkout@v3
@@ -32,39 +32,68 @@ jobs:
       run: |
         pip install -r requirements.txt
         pip install -r requirements_dev.txt
-
-    - name: Lint with flake8
-      run: |
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    
+   
     - name: Build package
       run: python -m build
     
-    - name: Install package
-      run: pip install -e .
-
-    - name: Test with pytest
-      run: pytest --capture=tee-sys --continue-on-collection-errors --junit-xml pytest.xml
-    
-    - name: Upload Test Results
-      if: always()
+    - name: Store package
       uses: actions/upload-artifact@v3
       with:
-        name: Test Results (Python ${{ matrix.python-version }})
-        path: pytest.xml
-
-    - name: Store package
-      uses: actions/upload-artifact@v3.0.0
-      with:
-        name: palliate_${{ github.sha }}_py${{ matrix.python-version }}
+        name: palgen_${{ github.sha }}_py${{ matrix.python-version }}
         path: dist/*
-    
-  publish-test-results:
+
+  test:
     name: "Publish Test Results"
     needs: build
+
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+  
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+  
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements_dev.txt
+      
+      - name: Download Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: palgen_${{ github.sha }}_py${{ matrix.python-version }}
+          path: dist
+
+      - name: Install package
+        run: pip install dist/palgen*.tar.gz
+      
+      - name: Lint with flake8
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Test with pytest
+        run: pytest --capture=tee-sys --continue-on-collection-errors --junit-xml pytest.xml
+      
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: Test Results (Python ${{ matrix.python-version }})
+          path: pytest.xml
+
+  publish-test-results:
+    name: "Publish Test Results"
+    needs: test
     runs-on: ubuntu-latest
 
     permissions:
