@@ -38,6 +38,7 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
+        cache: 'pip'
 
     - name: Install dependencies
       run: |
@@ -62,14 +63,14 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - macos-11
-          - macos-12
+          #- macos-11
+          #- macos-12
           - macos-latest
-          - ubuntu-20.04
-          - ubuntu-22.04
+          #- ubuntu-20.04
+          #- ubuntu-22.04
           - ubuntu-latest
-          - windows-2019
-          - windows-2022
+          #- windows-2019
+          #- windows-2022
           - windows-latest
         python-version: ["3.10", "3.11"]
 
@@ -82,21 +83,22 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+          cache: 'pip'
   
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
           pip install -r requirements_dev.txt
       
-      - name: Download Artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: palgen_${{ github.sha }}_${{ matrix.os }}_py${{ matrix.python-version }}
-          path: dist
+      #- name: Download Artifacts
+      #  uses: actions/download-artifact@v3
+      #  with:
+      #    name: palgen_${{ github.sha }}_${{ matrix.os }}_py${{ matrix.python-version }}
+      #    path: dist
 
       - name: Install package
-        run: pip install --find-links=dist palgen
-      
+        #run: pip install --find-links=dist palgen
+        run: pip install -e .
       - name: Test with pytest
         run: pytest --capture=tee-sys --continue-on-collection-errors --junit-xml pytest.xml
       
@@ -104,7 +106,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: Test Results (Python ${{ matrix.python-version }})
+          name: Test Results (Python ${{ matrix.python-version }}, ${{ matrix.os }})
           path: pytest.xml
   lint:
     name: "Lint"
@@ -120,6 +122,7 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: 3.11
+          cache: 'pip'
       
       - name: Install dependencies
         run: |
