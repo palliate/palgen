@@ -18,14 +18,14 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - macos-11
-          - macos-12
+          #- macos-11
+          #- macos-12
           - macos-latest
-          - ubuntu-20.04
-          - ubuntu-22.04
+          #- ubuntu-20.04
+          #- ubuntu-22.04
           - ubuntu-latest
-          - windows-2019
-          - windows-2022
+          #- windows-2019
+          #- windows-2022
           - windows-latest
         python-version: ["3.10", "3.11"]
 
@@ -50,7 +50,7 @@ jobs:
     - name: Store package
       uses: actions/upload-artifact@v3
       with:
-        name: palgen_${{ github.sha }}_py${{ matrix.python-version }}
+        name: palgen_${{ github.sha }}_${{ matrix.os }}_py${{ matrix.python-version }}
         path: dist/*
 
   test:
@@ -91,7 +91,7 @@ jobs:
       - name: Download Artifacts
         uses: actions/download-artifact@v3
         with:
-          name: palgen_${{ github.sha }}_py${{ matrix.python-version }}
+          name: palgen_${{ github.sha }}_${{ matrix.os }}_py${{ matrix.python-version }}
           path: dist
 
       - name: Install package
