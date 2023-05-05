@@ -54,7 +54,7 @@ jobs:
         path: dist/*
 
   test:
-    name: Build (python-${{ matrix.python-version }}, ${{ matrix.os }})
+    name: Test (python-${{ matrix.python-version }}, ${{ matrix.os }})
     needs: build
 
     runs-on: ${{ matrix.os }}
@@ -95,7 +95,7 @@ jobs:
           path: dist
 
       - name: Install package
-        run: pip install dist/palgen*.tar.gz
+        run: pip install --find-links=dist palgen
       
       - name: Test with pytest
         run: pytest --capture=tee-sys --continue-on-collection-errors --junit-xml pytest.xml
