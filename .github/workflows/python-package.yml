@@ -47,14 +47,14 @@ jobs:
       run: pip install -e .
 
     - name: Test with pytest
-      run: pytest --capture=tee-sys --continue-on-collection-errors --junit-xml test-results/pytest.xml
+      run: pytest --capture=tee-sys --continue-on-collection-errors --junit-xml pytest.xml
     
     - name: Upload Test Results
       if: always()
       uses: actions/upload-artifact@v3
       with:
         name: Test Results (Python ${{ matrix.python-version }})
-        path: test-results/pytest_${{ matrix.python-version }}.xml
+        path: pytest.xml
 
     - name: Store package
       uses: actions/upload-artifact@v3.0.0
