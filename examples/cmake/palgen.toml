@@ -2,3 +2,8 @@
 name = "cmake_example"
 version = "1.0.0"
 folders = ["src"]
+
+[sources]
+foo = "bar"
+bar = 5
+foobar = true

@@ -161,11 +161,64 @@ class AST:
         # do nothing with unrecognized nodes
 
     @visit.register
-    def _(self, node: ast.Module):
+    def visit_module(self, node: ast.Module):
         ''' Module(stmt* body, type_ignore* type_ignores) '''
 
         for child_node in node.body:
             self.visit(child_node)
+
+    @visit.register
+    def visit_assign(self, node: ast.Assign):
+        ''' Assign(expr* targets, expr value, string? type_comment) '''
+        # ignore type_comment, deduce type from value instead
+
+        if len(node.targets) > 1:
+            # assignments of the form `a = b = 42`
+
+            # difficult to parse if at least one target is a tuple, ie
+            # `foo, *bar = foobar = 1, 2, 3, 4`
+
+            return  # ? implement
+
+        self.try_constant(node.targets[0], node.value)
+
+    @visit.register
+    def visit_assign_annotated(self, node: ast.AnnAssign):
+        ''' AnnAssign(expr target, expr annotation, expr? value, int simple) '''
+        # ignore annotation, deduce type from value instead
+
+        if node.value is None:
+            # ignore statements such as `foo: bool`
+            return
+
+        self.try_constant(node.target, node.value)
+
+    @visit.register
+    def visit_import(self, node: ast.Import):
+        ''' Import(alias* names) '''
+        for name in node.names:
+            self.imports.append(Import(module=name.name.split('.'),
+                                       alias=name.asname))
+
+    @visit.register
+    def visit_import_from(self, node: ast.ImportFrom):
+        ''' ImportFrom(identifier? module, alias* names, int? level) '''
+        for name in node.names:
+            self.imports.append(Import(name=name.name,
+                                       module=node.module.split(
+                                           '.') if node.module else None,
+                                       alias=name.asname))
+
+    @visit.register
+    def visit_class(self, node: ast.ClassDef):
+        '''
+        ClassDef(identifier name,
+             expr* bases,
+             keyword* keywords,
+             stmt* body,
+             expr* decorator_list)
+        '''
+        self.classes.append(Class().visit(node))
 
     def try_constant(self, target: ast.expr, value: ast.expr):
         # `expr` can refer to a bunch of things that we cannot evaluate without executing
@@ -198,59 +251,6 @@ class AST:
             return
 
         self.constants[target.id] = value.value
-
-    @visit.register
-    def visit_assign(self, node: ast.Assign):
-        ''' Assign(expr* targets, expr value, string? type_comment) '''
-        # ignore type_comment, deduce type from value instead
-
-        if len(node.targets) > 1:
-            # assignments of the form `a = b = 42`
-
-            # difficult to parse if at least one target is a tuple, ie
-            # `foo, *bar = foobar = 1, 2, 3, 4`
-
-            return  # ? implement
-
-        self.try_constant(node.targets[0], node.value)
-
-    @visit.register
-    def visit_assign_annotated(self, node: ast.AnnAssign):
-        ''' AnnAssign(expr target, expr annotation, expr? value, int simple) '''
-        # ignore annotation, deduce type from value instead
-
-        if node.value is None:
-            # ignore statements such as `foo: bool`
-            return
-
-        self.try_constant(node.target, node.value)
-
-    @visit.register
-    def _(self, node: ast.Import):
-        ''' Import(alias* names) '''
-        for name in node.names:
-            self.imports.append(Import(module=name.name.split('.'),
-                                       alias=name.asname))
-
-    @visit.register
-    def _(self, node: ast.ImportFrom):
-        ''' ImportFrom(identifier? module, alias* names, int? level) '''
-        for name in node.names:
-            self.imports.append(Import(name=name.name,
-                                       module=node.module.split(
-                                           '.') if node.module else None,
-                                       alias=name.asname))
-
-    @visit.register
-    def _(self, node: ast.ClassDef):
-        '''
-        ClassDef(identifier name,
-             expr* bases,
-             keyword* keywords,
-             stmt* body,
-             expr* decorator_list)
-        '''
-        self.classes.append(Class().visit(node))
 
     def possible_names(self, base: type):
         ''' yields all possible symbols referring to the target type '''

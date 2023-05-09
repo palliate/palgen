@@ -3,19 +3,17 @@ from typing import Annotated, get_args, get_origin, get_type_hints
 
 from pydantic import BaseModel, ValidationError
 
+from palgen.util.cli import DictParam, ListParam
+
 logger = logging.getLogger(__name__)
 
 
 def check_schema_attribute(cls: type, name: str):
     if hasattr(cls, name) and (schema := getattr(cls, name)):
-        if schema is BaseModel:
-            return
-        if not isinstance(schema, type):
-            raise SyntaxError(
-                f"{name} of class `{cls.__name__}` is not a type.")
-        if BaseModel not in schema.__bases__:
-            raise SyntaxError(
-                f"{name} of class `{cls.__name__}` isn't a pydantic model.")
+        assert isinstance(schema, type), \
+            f"Schema {name} of class `{cls.__name__}` is not a type."
+        assert issubclass(schema, BaseModel), \
+            f"Schema {name} of class `{cls.__name__}` isn't a pydantic model."
 
 
 def print_validationerror(exception: ValidationError):
@@ -26,11 +24,9 @@ def print_validationerror(exception: ValidationError):
 
 
 def extract_help(hint) -> str:
-    if get_origin(hint) is not Annotated:
-        return ""
+    assert get_origin(hint) is Annotated
 
     _, *args = get_args(hint)
-
     return "" if len(args) > 1 or not isinstance(args[0], str) else args[0]
 
 
@@ -39,18 +35,42 @@ def pydantic_to_click(cls):
 
     for key, field in getattr(cls, "__fields__").items():
         options = {
-            'type': field.type_,  # TODO possible bug, check list[str]
+            'type': field.type_,
             'required': field.required,
             'help': ""
         }
 
         if hint := hints.get(key):
-            options['help'] = extract_help(hint)
+            if (origin := get_origin(hint)) is Annotated:
+                type_, *_ = get_args(hint)
+                options['help'] = extract_help(hint)
+                options['type'] = type_
+
+            elif origin is list:
+                inner_type, *rest = get_args(hint)
+                assert len(rest) == 0
+                options['type'] = ListParam[inner_type]
+                print(options)
+
+            elif origin is dict:
+                key_t, val_t, *rest = get_args(hint)
+                assert len(rest) == 0
+                options['type'] = DictParam[key_t, val_t]
 
         if not field.required:
             options['default'] = field.default
 
         if field.type_ is bool:
             options['is_flag'] = True
-
         yield key, options
+
+
+class Scshema(BaseModel):
+    def __set_name__(self, owner, name):
+        print("called")
+        print(self)
+        print(owner)
+        print(name)
+
+        # return super().__set_name__(owner, name)
+Model = BaseModel

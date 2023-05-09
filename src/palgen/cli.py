@@ -1,12 +1,18 @@
+import contextlib
 import importlib
 import logging
 from pathlib import Path
 from typing import Optional
 
 import click
+from pydantic import BaseModel, ValidationError, validate_model
+from pydantic.errors import MissingError
 
-from palgen.util.log import set_min_level
+from palgen.module import Module
 from palgen.palgen import Palgen
+from palgen.util.cli import ListParam
+from palgen.util.log import set_min_level
+from palgen.util.schema import pydantic_to_click
 
 logger = logging.getLogger(__name__)
 
@@ -57,20 +63,51 @@ class CommandLoader(click.Group):
 
         assert isinstance(ctx.obj, Palgen)
         if cmd_name in ctx.obj.modules.runnables:
-            meta = ctx.obj.modules.runnables[cmd_name]
-            return meta.cli
+            module = ctx.obj.modules.runnables[cmd_name]
+            if hasattr(module, "cli"):
+                return module.cli
+            else:
+                return CommandLoader._generate_cli(module, ctx.obj)
 
         return None
 
     @staticmethod
+    def _generate_cli(module: Module, palgen: Palgen):
+        key = module.name.lower()
+        @click.command(name=key,
+                       help=module.__doc__,
+                       context_settings={'show_default': True})
+        @click.pass_context
+        def wrapper(ctx, **kwargs):
+            nonlocal module
+            parser = module(ctx.obj.root, ctx.obj.root, kwargs)
+            parser.run(ctx.obj.files)
+
+        if key in palgen.settings:
+            assert issubclass(module.Settings, BaseModel)
+            *_, errors = validate_model(module.Settings, palgen.settings[key])
+            if errors:
+                unfiltered = [error for error in errors.raw_errors
+                            if not isinstance(error.exc, MissingError)]
+                if unfiltered:
+                    raise ValidationError(unfiltered, module.Settings)
+
+        for field, options in pydantic_to_click(module.Settings):
+            if key in palgen.settings and field in palgen.settings[key]:
+                options["required"] = False
+                options["default"] = palgen.settings[key][field]
+
+            wrapper = click.option(f'--{field}', **options)(wrapper)
+
+        return wrapper
+
+    @staticmethod
     def _load_builtin(name):
-        try:
+        with contextlib.suppress(ImportError):
             mod = importlib.import_module(name)
             if hasattr(mod, "cli"):
                 return mod.cli
 
-        except ImportError:
-            pass
         return None
 
 
@@ -80,7 +117,7 @@ class CommandLoader(click.Group):
               help="Path to project configuration.",
               default=Path.cwd() / "palgen.toml")
 @click.option('-v', "--version", help="Show palgen version", is_flag=True)
-@click.option("--extra-folders", default="")
+@click.option("--extra-folders", default=[], type=ListParam[Path])
 @click.option("--dependencies", default=None, type=Path)
 @click.pass_context
 def cli(ctx, debug: bool, version: bool, config: Path, extra_folders: str, dependencies: Optional[Path]):
@@ -95,8 +132,7 @@ def cli(ctx, debug: bool, version: bool, config: Path, extra_folders: str, depen
 
     # override options
     if extra_folders:
-        paths = [Path(path) for path in extra_folders.split(';')]
-        ctx.obj.options.modules.extra_folders = paths
+        ctx.obj.options.modules.extra_folders = extra_folders
 
     if dependencies:
         ctx.obj.options.modules.dependencies = dependencies

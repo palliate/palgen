@@ -1,25 +1,24 @@
 import traceback
 import logging
 from pathlib import Path
-from typing import Any, Optional, Iterable, Type
+from typing import Any, Optional, Iterable
 
-import click
 from jinja2 import Environment, FileSystemLoader
 from pydantic import BaseModel, ValidationError
 
-from palgen.ingest import Ingest, Nothing, Filter
+from palgen.ingest import Nothing, Filter
 from palgen.ingest.toml import Toml
 
-from palgen.util import Pipeline, setattr_default
+from palgen.util import Pipeline, setattr_default, chain_with_args
 from palgen.util.filesystem import SuffixDict, Sources
-from palgen.util.schema import check_schema_attribute, print_validationerror, pydantic_to_click
+from palgen.util.schema import check_schema_attribute, print_validationerror, Model
 
 logger = logging.getLogger(__name__)
 
 
 class Module:
-    Settings = BaseModel
-    Schema = BaseModel
+    Settings = Model
+    Schema = Model
 
     name: str  # defaults to lowercase class name
     private: bool
@@ -85,7 +84,6 @@ class Module:
 
     def run(self, source_tree: SuffixDict) -> list[Path]:
         output: list[Path] = list(self.pipeline(source_tree, self))
-
         logger.info("Module `%s` yielded %s file%s",
                     self.name,
                     len(output),
@@ -101,6 +99,7 @@ class Module:
         try:
             self.settings = self.Settings.parse_obj(settings)
             logger.debug("Validated settings for %s", self.name)
+
         except ValidationError as ex:
             logger.warning("Failed verifying config for `%s`", self.name)
             print_validationerror(ex)
@@ -116,18 +115,39 @@ class Module:
 
         setattr_default(cls, "name", name or cls.__name__.lower())
         setattr_default(cls, "private", private)
-        setattr_default(cls, "ingest", Pipeline >> Filter(getattr(cls, "name"))
-                                                >> Toml)
-        #if getattr(cls, "ingest") is None:
-        #    # TODO
-        #    # replace None with ingest that never yields
-        #    setattr(cls, "ingest", Nothing)
 
-        setattr_default(cls, "pipeline", Pipeline >> getattr(cls, "ingest")
-                                                  >> cls.transform
-                                                  >> cls.validate
-                                                  >> cls.render
-                                                  >> cls.write)
+        setattr_default(cls, "ingest", Pipeline >> Filter(getattr(cls, "name"), '.toml')
+                                                >> Toml)
+        assert hasattr(cls, "ingest")
+        ingest = getattr(cls, "ingest")
+
+        if not hasattr(cls, "pipeline"):
+            match ingest:
+                case Pipeline():
+                    setattr(cls, "pipeline", Pipeline >> ingest
+                                                      >> cls.transform
+                                                      >> cls.validate
+                                                      >> cls.render
+                                                      >> cls.write)
+                case None:
+                    setattr(cls, "pipeline", Pipeline >> Nothing)
+                case dict():
+                    pipelines = []
+                    for key, value in ingest.items():
+                        pipeline = Pipeline >> value
+                        for fnc in 'transform', 'validate', 'render':
+                            name = f"{fnc}_{key}"
+                            pipeline >>= getattr(cls, name, getattr(cls, fnc))
+                        pipeline >>= cls.write
+                        pipelines.append(pipeline)
+                    logging.debug("Pipelines: \n%s",
+                                  '\n'.join('    ' + str(p) for p in pipelines))
+
+                    setattr(cls, "pipeline", lambda _, sources, obj:
+                            chain_with_args(pipelines, sources, obj))
+                case _:
+                    raise RuntimeError("Invalid ingest")
+
         check_schema_attribute(cls, "Settings")
         check_schema_attribute(cls, "Schema")
 
@@ -141,23 +161,5 @@ class Module:
             comment_end_string="*/",
             keep_trailing_newline=True,
         ))
-
-        if not hasattr(cls, "cli"):
-            @click.command(name=cls.name,
-                           help=cls.__doc__,
-                           context_settings={'show_default': True})
-            @click.pass_context
-            def cli(ctx, **kwargs):
-                settings = ctx.obj.settings.get(cls.name, {})
-                settings |= {k: v for k, v in kwargs.items() if v}
-
-                parser = cls(ctx.obj.root, ctx.obj.root, settings)
-                parser.run(ctx.obj.files)
-
-            for field, options in pydantic_to_click(cls.Settings):
-                cli = click.option(f'--{field}', **options)(cli)
-
-            setattr(cls, "cli", cli)
-
 
 __all__ = ['Module', 'Sources']

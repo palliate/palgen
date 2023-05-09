@@ -21,9 +21,14 @@ class Pipeline(metaclass=PipelineMeta):
             try:
                 step = step()
             except TypeError as exc:
-                raise ValueError(f"Type `{step}` in pipeline is not default constructible") from exc
+                raise ValueError(
+                    f"Type `{step}` in pipeline is not default constructible") from exc
 
-        self.steps.append(step)
+        if isinstance(step, Pipeline) and step.initial_state is None:
+            self.steps.extend(step.steps)
+        else:
+            self.steps.append(step)
+
         return self
 
     def __iter__(self, state: Optional[Iterable] = None, obj: Any = None):
@@ -39,12 +44,20 @@ class Pipeline(metaclass=PipelineMeta):
     def __call__(self, state: Iterable, obj: Any = None):
         yield from self.__iter__(state, obj)
 
+    def __repr__(self):
+        def pretty(obj):
+            if isinstance(obj, str):
+                return obj
+            return obj.__name__ if hasattr(obj, "__name__") else  type(obj).__name__
+
+        return ' >> '.join(pretty(obj) for obj in [self.initial_state or "[object]", *self.steps])
+
     @staticmethod
     def _late_bind(fnc: Callable, obj: Any):
         if obj is None or ismethod(fnc):
             # skip if we don't have an object to bind
             # or fnc is already bound
-            #? checking if fnc.__self__ is not None might be sufficient?
+            # ? checking if fnc.__self__ is not None might be sufficient?
             return fnc
 
         if not isfunction(fnc) or not hasattr(fnc, "__qualname__"):
