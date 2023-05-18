@@ -1,13 +1,14 @@
-from typing import Any
+from abc import ABC
+from typing import Annotated, get_args, get_origin, get_type_hints
 
 import click
 
 from palgen.util import strip_quotes
 
 
-class ListParam(click.ParamType):
+class ListParam(ABC, click.ParamType):
     name = "list"
-    inner_t = Any
+    inner_t: type
 
     def convert(self, value, *_):
         if isinstance(value, list):
@@ -30,10 +31,10 @@ class ListParam(click.ParamType):
         return type(name, (ListParam,), {'name': name, 'inner_t': inner_t})()
 
 
-class DictParam(click.ParamType):
+class DictParam(ABC, click.ParamType):
     name = "dict"
-    key_t = Any
-    value_t = Any
+    key_t: type
+    value_t: type
 
     def convert(self, value, param, ctx):
         if isinstance(value, dict):
@@ -68,3 +69,44 @@ class DictParam(click.ParamType):
 
         name = f"{getattr(cls, 'name')}[{key_t.__name__}, {value_t.__name__}]"
         return type(name, (DictParam,), {'name': name, 'key_t': key_t, 'value_t': value_t})()
+
+
+def extract_help(hint) -> str:
+    assert get_origin(hint) is Annotated
+
+    _, *args = get_args(hint)
+    return "" if len(args) > 1 or not isinstance(args[0], str) else args[0]
+
+
+def pydantic_to_click(cls):
+    hints = get_type_hints(cls, include_extras=True)
+
+    for key, field in getattr(cls, "__fields__").items():
+        options = {
+            'type': field.type_,
+            'required': field.required,
+            'help': ""
+        }
+
+        if hint := hints.get(key):
+            if (origin := get_origin(hint)) is Annotated:
+                type_, *_ = get_args(hint)
+                options['help'] = extract_help(hint)
+                options['type'] = type_
+
+            elif origin is list:
+                inner_type, *rest = get_args(hint)
+                assert len(rest) == 0
+                options['type'] = ListParam[inner_type]
+
+            elif origin is dict:
+                key_t, val_t, *rest = get_args(hint)
+                assert len(rest) == 0
+                options['type'] = DictParam[key_t, val_t]
+
+        if not field.required:
+            options['default'] = field.default
+
+        if field.type_ is bool:
+            options['is_flag'] = True
+        yield key, options

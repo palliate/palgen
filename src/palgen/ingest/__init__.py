@@ -3,41 +3,9 @@
 
 from pathlib import Path
 from abc import abstractmethod
-from typing import Iterable, Any, Optional
+from typing import Iterable, Any
 from palgen.util.filesystem import SuffixDict
 
-
-"""
-@dataclass
-class Meta:
-    qualname: list[str]
-    source: Path
-
-    @cached_property
-    def name(self):
-        assert self.qualname
-        return self.qualname[0]
-
-    @cached_property
-    def namespace(self):
-        assert self.qualname
-        return self.qualname[:-1]"""
-
-class Filter:
-    def __init__(self, name: Optional[str] = None, extension: Optional[str] = None):
-        # TODO: wildcards
-        self.name = name or ""
-        self.extension = extension or ""
-
-        assert self.name or self.extension
-
-    def __call__(self, file_cache: SuffixDict) -> Iterable[Path]:
-        if not self.name:
-            for _, path in file_cache.by_extension(self.extension).items():
-                yield from path
-            return
-
-        yield from file_cache.by_name(f"{self.name}{self.extension}")
 
 class Ingest:
     @abstractmethod

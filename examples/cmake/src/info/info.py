@@ -1,6 +1,6 @@
 import logging
 
-from palgen.ingest import Filter
+from palgen.ingest.filter import Name
 from palgen.ingest.file import Empty
 
 from palgen.schemas.project import ProjectSettings
@@ -8,7 +8,7 @@ from palgen.module import Module, Sources
 
 
 class Project(Module):
-    ingest = Sources >> Filter("info.target") >> Empty
+    ingest = Sources >> Name("info.target") >> Empty
     Settings = ProjectSettings
 
     def validate(self, data):

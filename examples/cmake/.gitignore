@@ -1,3 +1,4 @@
 src/generated/*
 !src/generated/info.target
 **/build
+**/__pycache__

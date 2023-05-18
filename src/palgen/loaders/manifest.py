@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Optional
 import toml
 from pydantic import BaseModel
 
-from palgen.ingest import Filter
+from palgen.ingest.filter import Name
 from palgen.loaders import Loader
 from palgen.loaders.python import Python
 from palgen.util.filesystem import SuffixDict
@@ -39,7 +39,7 @@ class Manifest(Loader):
                     yield from Manifest.load(Path(path))
 
         elif isinstance(sources, SuffixDict):
-            files = Filter('palgen', '.manifest')(sources)
+            files = Name('palgen.manifest')(sources)
             for file in files:
                 yield from Manifest.load(file)
 

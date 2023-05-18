@@ -10,7 +10,7 @@ from palgen.module import Module
 from palgen.schemas.project import ProjectSettings
 
 from palgen.util.filesystem import SuffixDict
-from palgen.ingest import Filter
+from palgen.ingest.filter import Extension
 from palgen.util.ast_helper import AST
 
 logger = logging.getLogger(__name__)
@@ -20,8 +20,7 @@ class Python(Loader):
 
     @staticmethod
     def ingest(sources: SuffixDict, project: Optional[ProjectSettings] = None):
-        files = Filter(extension='.py')(sources)
-
+        files = Extension('py')(sources)
         for file in files:
             yield from Python.load(file, project=project)
 

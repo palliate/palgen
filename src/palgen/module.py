@@ -6,7 +6,8 @@ from typing import Any, Optional, Iterable
 from jinja2 import Environment, FileSystemLoader
 from pydantic import BaseModel, ValidationError
 
-from palgen.ingest import Nothing, Filter
+from palgen.ingest import Nothing
+from palgen.ingest.filter import Extension, Name
 from palgen.ingest.toml import Toml
 
 from palgen.util import Pipeline, setattr_default, chain_with_args
@@ -116,7 +117,8 @@ class Module:
         setattr_default(cls, "name", name or cls.__name__.lower())
         setattr_default(cls, "private", private)
 
-        setattr_default(cls, "ingest", Pipeline >> Filter(getattr(cls, "name"), '.toml')
+        setattr_default(cls, "ingest", Pipeline >> Extension('toml')
+                                                >> Name(getattr(cls, "name"))
                                                 >> Toml)
         assert hasattr(cls, "ingest")
         ingest = getattr(cls, "ingest")
@@ -141,7 +143,7 @@ class Module:
                         pipeline >>= cls.write
                         pipelines.append(pipeline)
                     logging.debug("Pipelines: \n%s",
-                                  '\n'.join('    ' + str(p) for p in pipelines))
+                                  '\n'.join(f'    {str(p)}' for p in pipelines))
 
                     setattr(cls, "pipeline", lambda _, sources, obj:
                             chain_with_args(pipelines, sources, obj))

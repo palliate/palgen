@@ -1,17 +1,19 @@
+import importlib.metadata
 import logging
 import sys
 
 from colorama import init
 
+from palgen.cli import cli as main
 from palgen.palgen import Palgen
 from palgen.util.log import setup_logger
-from palgen.cli import cli as main
 
 init()
 setup_logger()
 
-
+__version__ = importlib.metadata.version('palgen')
 __all__ = ['Palgen', 'main']
+
 
 def handle_exception(type_, value, trace):
     """Global exception handler.

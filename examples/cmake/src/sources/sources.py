@@ -1,7 +1,6 @@
 import logging
 
-from pydantic import BaseModel
-from palgen.ingest import Filter
+from palgen.ingest.filter import Extension
 from palgen.ingest.file import Raw
 
 
@@ -12,14 +11,9 @@ from typing import Annotated
 class Sources(Module):
     """ Sources module help text. Spliced after the dot """
 
-    class Settings(Model):
-        foo: Annotated[str, "help text for foo"]
-        bar: int = 3
-        foobar: bool
-
     ingest = {
-        'headers': Pipeline >> Filter(extension=".h") >> Raw,
-        'sources': Pipeline >> Filter(extension=".cpp") >> Raw
+        'headers': Pipeline >> Extension(".h") >> Raw,
+        'sources': Pipeline >> Extension(".cpp") >> Raw
     }
 
     def transform_headers(self, data):

@@ -10,9 +10,8 @@ from pydantic.errors import MissingError
 
 from palgen.module import Module
 from palgen.palgen import Palgen
-from palgen.util.cli import ListParam
+from palgen.util.cli import ListParam, pydantic_to_click
 from palgen.util.log import set_min_level
-from palgen.util.schema import pydantic_to_click
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +121,8 @@ class CommandLoader(click.Group):
 @click.pass_context
 def cli(ctx, debug: bool, version: bool, config: Path, extra_folders: str, dependencies: Optional[Path]):
     if version:
-        print("TODO")
+        import palgen
+        print(f"palgen {palgen.__version__}")
         return
     if debug:
         # logging.getLogger(__package__).setLevel(logging.DEBUG)
@@ -162,23 +162,3 @@ Templates:   {list(ctx.obj.modules.keys())}
 Subprojects: {list(ctx.obj.subprojects.keys())}"""
 
     print(text)
-
-
-@cli.command()
-@click.option("-o", "--output", help="Output path", type=Path, required=True)
-@click.option("-r", "--relative", help="Output relative paths instead of absolute ones.", is_flag=True)
-@click.pass_context
-def generate_manifest(ctx, output: Path, relative: bool):
-    assert isinstance(ctx.obj, Palgen)
-
-    if output.is_dir():
-        output /= 'palgen.manifest'
-    output.parent.mkdir(exist_ok=True)
-
-    # TODO generate sane relative paths. I don't like the current way but it's fine for now
-    manifest = ctx.obj.generate_manifest(
-        output.parent.absolute() if relative else None)
-
-    with open(output, 'w', encoding="utf-8") as file:
-        file.write(manifest)
-    logger.info("Written manifest file %s", output)

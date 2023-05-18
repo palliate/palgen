@@ -3,7 +3,7 @@ import logging
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Optional, Pattern
+from typing import Optional, Pattern, Iterable
 from palgen.util import Pipeline
 
 logger = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ def gitignore(path: Path) -> set[Pattern]:
     return set()
 
 
-def walk(path: Path | str, ignores: PathFilter | set[Pattern]):
+def walk(path: Path | str, ignores: PathFilter | set[Pattern]) -> Iterable[Path]:
     if isinstance(ignores, set):
         ignores = PathFilter(ignores)
 
@@ -67,29 +67,77 @@ def walk(path: Path | str, ignores: PathFilter | set[Pattern]):
             logger.debug("Skipped `%s`", entry)
             continue
 
-        if entry.is_file():
-            yield entry
+        yield entry
 
-        elif entry.is_dir():
+        if entry.is_dir():
             yield from walk(entry, ignores)
 
 
 class SuffixDict(defaultdict[str, defaultdict[str, list[Path]]]):
     def __init__(self):
         super().__init__(lambda: defaultdict(list[Path]))
+        self.directories: list[Path] = []
 
     def walk(self, path: Path, ignores: PathFilter | set[Pattern]):
         for entry in walk(path, ignores):
-            self[entry.suffix][entry.stem].append(entry)
+            if entry.is_file():
+                self[entry.suffix][entry.stem].append(entry)
+            elif entry.is_dir():
+                self.directories.append(entry)
 
-    def by_extension(self, extension) -> dict[str, list[Path]]:
-        return self.get(extension, {})
+    def by_extension(self, extension: str | Pattern) -> Iterable[Path]:
+        if not isinstance(extension, Pattern):
+            if not extension.startswith('.'):
+                extension = f'.{extension}'
 
-    def by_name(self, name: str | Path) -> list[Path]:
-        name = Path(name)
-        if files := self.by_extension(name.suffix):
-            return files.get(name.stem, [])
-        return []
+            if extension.count('.') > 1:
+                extensions = extension.split('.')
+                for stem, paths in self.get(extensions[-1], {}).items():
+                    if stem.endswith('.'.join(extensions[:-1])):
+                        yield from paths
+            else:
+                for _, paths in self.get(extension, {}).items():
+                    return paths
+
+        for suffix, entry in self.items():
+            if not re.match(extension, suffix):
+                continue
+            yield from entry.values()
+
+    def by_name(self, name: str | Pattern) -> Iterable[Path]:
+        if not isinstance(name, Pattern):
+            path = Path(name)
+            assert path.is_file(), f"Name {name} cannot refer to a valid file"
+
+            if files := self.get(path.suffix):
+                yield from files.get(path.stem, [])
+
+        for path in self:
+            if not re.match(name, path.name):
+                continue
+            yield path
+
+    def by_stem(self, stem: str | Pattern) -> Iterable[Path]:
+        for path in self:
+            if isinstance(stem, Pattern):
+                if not re.match(stem, path.stem):
+                    continue
+            elif stem != path.stem:
+                continue
+
+            yield path
+
+    def by_pattern(self, pattern: Pattern) -> Iterable[Path]:
+        for path in self:
+            if not re.match(pattern, str(path)):
+                continue
+            yield path
+
+    def __iter__(self) -> Iterable[Path]:
+        for _, entry in self.items():
+            for _, paths in entry.items():
+                yield from paths
+
 
 class Sources(Pipeline):
     def __call__(self, state: SuffixDict):
