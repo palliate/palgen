@@ -11,6 +11,7 @@ class PipelineMeta(type):
 
 
 class Pipeline(metaclass=PipelineMeta):
+    # TODO parallelize
 
     def __init__(self, state=None):
         self.initial_state: Optional[Iterable] = state

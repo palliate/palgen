@@ -69,16 +69,20 @@ def test_import_builtins():
         ast = AST.load(MOCK_PATH)
         #TODO
 
+def test_import_relative():
+    with mock_file("from . import foo"):
+        ast = AST.load(MOCK_PATH)
+
 
 @pytest.mark.parametrize('import_,symbol', [
-    ('from palgen import module', 'module.Module'),
-    ('from palgen.module import Module', 'Module'),
-    ('from palgen import module as t', 't.Module'),
-    ('from palgen.module import Module as templ', 'templ'),
-    ('import palgen', 'palgen.module.Module'),
-    ('import palgen.module', 'palgen.module.Module'),
-    ('import palgen.module as t', 't.Module'),
-    ('import palgen as p', 'p.module.Module')
+    ('from palgen import module',             'module.Module'),
+    ('from palgen.module import Module',      'Module'),
+    ('from palgen import module as t',        't.Module'),
+    ('from palgen.module import Module as t', 't'),
+    ('import palgen',                         'palgen.module.Module'),
+    ('import palgen.module',                  'palgen.module.Module'),
+    ('import palgen.module as t',             't.Module'),
+    ('import palgen as p',                    'p.module.Module')
 ])
 class TestParametrized:
 

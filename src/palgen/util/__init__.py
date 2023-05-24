@@ -1,3 +1,5 @@
+from pathlib import Path
+import traceback
 from typing import Any
 from palgen.util.pipeline import Pipeline
 
@@ -17,3 +19,11 @@ def strip_quotes(string):
     if string[0] == string[-1] and string[0] in ('\'', '\"'):
         return string[1:-1]
     return string
+
+def get_caller() -> traceback.FrameSummary:
+    return traceback.extract_stack(limit=3)[-3]
+
+
+def get_caller_path() -> Path:
+    frame = traceback.extract_stack(limit=3)[-3]
+    return Path(frame.filename)

@@ -7,13 +7,12 @@ from palgen.loaders.python import Python
 from palgen.module import Module
 from palgen.schemas.palgen import ModuleSettings
 from palgen.schemas.project import ProjectSettings
-from palgen.util.filesystem import SuffixDict
 
 logger = logging.getLogger(__name__)
 
 
 class Modules:
-    def __init__(self, project: ProjectSettings, settings: ModuleSettings, file_cache: SuffixDict) -> None:
+    def __init__(self, project: ProjectSettings, settings: ModuleSettings, files: Iterable[Path]) -> None:
         self.private: dict[str, Type[Module]] = {}
         self.public: dict[str, Type[Module]] = {}
         #TODO namespaces
@@ -27,7 +26,7 @@ class Modules:
 
         if settings.python:
             logger.info("Loading Python modules")
-            self._extend(Python.ingest(file_cache, project=project))
+            self._extend(Python.ingest(files, project=project))
 
     def _extend(self, modules: Iterable[tuple[str, Type[Module]]]):
         for name, module in modules:

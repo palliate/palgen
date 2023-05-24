@@ -13,7 +13,8 @@ from palgen.schemas.root import RootSettings
 from palgen.schemas.project import ProjectSettings
 from palgen.schemas.palgen import PalgenSettings
 from palgen.loaders.manifest import Manifest
-from palgen.util.filesystem import SuffixDict, gitignore
+from palgen.util.filesystem import gitignore, walk
+
 
 logger = logging.getLogger(__name__)
 
@@ -48,16 +49,16 @@ class Palgen:
             if self.project.output else self.root
 
     @cached_property
-    def files(self) -> SuffixDict:
-        """ Representation of the source tree in the form of
-            dict[suffix, dict[name, list[Path]]]
+    def files(self) -> list[Path]:
+        """ List of all files considered as module imports. This is
+            pre-filtered to exclude everything ignored through .gitignore files.
 
             First access to this can be slow, since it has to walk the entire
             source tree once. After that it'll be in cache.
         Returns:
-            SuffixDict
+            list[Path]
         """
-        discovered = SuffixDict()
+        discovered = []
 
         for folder in self.project.folders:
             path: Path = self._path_for(folder)
@@ -65,7 +66,7 @@ class Palgen:
                 logger.warning("Folder not found: %s. Skipping.", path)
                 continue
 
-            discovered.walk(path, gitignore(self.root))
+            discovered.extend(list(walk(path, gitignore(self.root))))
         return discovered
 
     @cached_property
@@ -78,7 +79,7 @@ class Palgen:
 
         return Modules(self.project, self.options.modules, self.files)
 
-    @cached_property
+    """@cached_property
     def subprojects(self) -> dict[str, Palgen]:
         # TODO remove, unused
         subprojects_: dict[str, Palgen] = {}
@@ -91,7 +92,7 @@ class Palgen:
 
             subprojects_[loader.project.name] = loader
 
-        return subprojects_
+        return subprojects_"""
 
     def _path_for(self, folder: str | Path) -> Path:
         path = Path(folder)

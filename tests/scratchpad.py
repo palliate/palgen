@@ -1,62 +1,77 @@
-import timeit
-def foo2(bar):
-    for i in bar:
-        yield 11 + i
+import fnmatch
+import logging
+import re
+from collections import defaultdict
+from pathlib import Path
+from typing import Optional, Pattern, Iterable
+from palgen.util import Pipeline
+
+logger = logging.getLogger(__name__)
 
 
-def wrap(f):
-    return lambda: list(f())
+class PathFilter:
+    def __init__(self, patterns: Optional[set[Pattern]] = None):
+        self.blacklist: set[Pattern] = set(patterns) if patterns else set()
 
-LIMIT = 100000
-RUNS = 100
+    def extend(self, patterns: set[Pattern]) -> None:
+        self.blacklist.update(patterns)
 
+    def copy_extend(self, patterns: set[Pattern]) -> 'PathFilter':
+        if not patterns:
+            return self
 
-def time(*funcs):
-    for func in funcs:
-        duration = timeit.Timer(wrap(func)).timeit(number=RUNS)
-        avg_duration = duration/RUNS
-        print(
-            f'Average after {RUNS} runs: {func.__name__} {avg_duration} seconds')
+        ret = PathFilter(self.blacklist.copy())
+        ret.extend(patterns)
+        return ret
 
-from functools import reduce
-from pprint import pprint
-
-class Pipeline:
-    def __init__(self, state=None):
-        self.steps = [state] if state is not None else []
-
-    def __rshift__(self, step):
-        if isinstance(step, type):
-            try:
-                step = step()
-            except TypeError as exc:
-                raise ValueError("Type in pipeline is not default constructible") from exc
-
-        self.steps.append(step)
-        return self
-
-    def __iter__(self):
-        print(self)
-        yield from reduce(lambda state, step: step(state), self.steps)
-
-    def __call__(self, state):
-        self.steps = [state, *self.steps]
-        yield from self
+    def check(self, path: Path) -> bool:
+        return any(i.match(str(path)) for i in self.blacklist)
 
 
-def zoinkers(bar):
-    for i in bar:
-        yield i * 2
+def gitignore(path: Path) -> set[Pattern]:
+    if path.is_dir():
+        path = path / '.gitignore'
 
-class Foinkers(Pipeline):
-    def __call__(self, data):
-        for i in data:
-            if i > 4:
-                yield i
+    if path.exists():
+        logger.debug("Parsing `%s`", path)
+        with open(path, mode='r', encoding='utf-8') as file:
+            return {re.compile(fnmatch.translate(line))
+                    for line in file.read().splitlines()
+                    if line}
+    return set()
 
-def boinkers(bar):
-    for i in bar:
-        yield f'stringified:{str(i)}'
 
-foo = Foinkers(range(10)) >> zoinkers >> Foinkers >> boinkers
-pprint(list(foo))
+def walk(path: Path | str, ignores: PathFilter | set[Pattern]) -> Iterable[Path]:
+    if isinstance(ignores, set):
+        ignores = PathFilter(ignores)
+
+    path = Path(path)
+    if not path.is_dir():
+        raise NotADirectoryError
+
+    if ignores.check(path):
+        logger.debug("Skipped %s", path)
+        return
+
+    ignores = ignores.copy_extend(gitignore(path))
+
+    if (probe := path / 'palgen.toml').exists():
+        # skip subtrees of other projects but yield the project file
+        logger.debug("Found another palgen project in `%s`. Skipping.")
+        yield probe
+        return
+
+    for entry in path.iterdir():
+        if ignores.check(entry):
+            # honor .gitignore, skip this entry
+            logger.debug("Skipped `%s`", entry)
+            continue
+
+        yield entry
+
+        if entry.is_dir():
+            yield from walk(entry, ignores)
+
+root = Path("/home/che/src/llvm-project")
+files = list(walk(root, gitignore(root)))
+print(len(files))

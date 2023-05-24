@@ -263,7 +263,7 @@ class AST:
             return
 
         for import_ in self.imports:
-            assert import_.module, f"Import has no module: {str(import_)}"
+            assert import_.module is not None, f"Import has no module: {str(import_)}"
             for idx, (import_part, search_part) in enumerate(zip(import_.module, module)):
                 if import_part != search_part:
                     break

@@ -1,72 +1,64 @@
-# TODO
-
 import fnmatch
 import re
 from pathlib import Path
 from typing import Iterable
 
-from palgen.util.filesystem import SuffixDict
-
 
 class Filter:
-    def __init__(self, *needles: str, regex: bool = False, unix: bool = False) -> None:
-        super().__init__()
-        self.needles: list[str | Pattern] = []
+    def __init__(self, *needles: str | re.Pattern, regex: bool = False, unix: bool = False) -> None:
+        self.needles: list[str | re.Pattern] = []
 
         for needle in needles:
-            if regex or needle.startswith('^') or needle.endswith('$'):
+            assert isinstance(needle, (str, re.Pattern)), \
+                f"Expected str or Pattern, got {type(needle)}"
+
+            if isinstance(needle, re.Pattern):
+                self.needles.append(needle)
+            elif regex or unix or needle.startswith('^') or needle.endswith('$'):
                 self.needles.append(re.compile(fnmatch.translate(needle)
                                                if unix else needle))
             else:
                 self.needles.append(needle)
 
-    def matches(self, other: str):
+    def match_str(self, other: str):
         for needle in self.needles:
-            matches = re.match if isinstance(needle, Pattern) else str.__eq__
+            matches = re.match \
+                if isinstance(needle, re.Pattern) else str.__eq__
+            print(needle)
             if matches(needle, other):
                 return True
         return False
 
-    def ingest(self, files: Iterable[Path | str]) -> Iterable[Path]:
-        if isinstance(files, SuffixDict):
-            for needle in self.needles:
-                yield from files.by_pattern(needle)
-        else:
-            for file in files:
-                if self.matches(str(file)):
-                    yield file
+    def match_files(self, files: Iterable[Path], attribute=None):
+        for file in files:
+            assert isinstance(file, Path), f"File isn't a Path object: {file}"
+            if self.match_str(str(file)
+                              if attribute is None
+                              else getattr(file, attribute)):
+                yield file
 
-    def __call__(self, file_cache: Iterable[Path] | SuffixDict) -> Iterable[Path]:
+    def ingest(self, files: Iterable[Path | str]) -> Iterable[Path]:
+        yield from self.match_files(files)
+
+    def __call__(self, file_cache: Iterable[Path]) -> Iterable[Path]:
         yield from self.ingest(file_cache)
 
 
 class Pattern(Filter):
     def __init__(self, *patterns: str, unix: bool = False) -> None:
-        super().__init__(*patterns, True, unix)
+        super().__init__(*patterns, regex=True, unix=unix)
 
 
 class Extension(Filter):
-    def ingest(self, files: Iterable[Path] | SuffixDict) -> Iterable[Path]:
-        if isinstance(files, SuffixDict):
-            for needle in self.needles:
-                yield from files.by_extension(needle)
-        else:
-            yield from super().ingest(file.suffix for file in files)
+    def ingest(self, files: Iterable[Path]) -> Iterable[Path]:
+        yield from self.match_files(files, 'suffix')
 
 
 class Stem(Filter):
     def ingest(self, files: Iterable[Path]) -> Iterable[Path]:
-        if isinstance(files, SuffixDict):
-            for needle in self.needles:
-                yield from files.by_stem(needle)
-        else:
-            yield from super().ingest(file.stem for file in files)
+        yield from self.match_files(files, 'stem')
 
 
 class Name(Filter):
     def ingest(self, files: Iterable[Path]) -> Iterable[Path]:
-        if isinstance(files, SuffixDict):
-            for needle in self.needles:
-                yield from files.by_name(needle)
-        else:
-            yield from super().ingest(file.name for file in files)
+        yield from self.match_files(files, 'name')

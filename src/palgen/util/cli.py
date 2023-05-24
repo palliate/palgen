@@ -77,8 +77,7 @@ def extract_help(hint) -> str:
     _, *args = get_args(hint)
     return "" if len(args) > 1 or not isinstance(args[0], str) else args[0]
 
-
-def pydantic_to_click(cls):
+def pydantic_to_click(cls: type):
     hints = get_type_hints(cls, include_extras=True)
 
     for key, field in getattr(cls, "__fields__").items():
@@ -107,6 +106,6 @@ def pydantic_to_click(cls):
         if not field.required:
             options['default'] = field.default
 
-        if field.type_ is bool:
+        if options['type'] is bool:
             options['is_flag'] = True
         yield key, options

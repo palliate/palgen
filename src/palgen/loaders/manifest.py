@@ -8,7 +8,6 @@ from pydantic import BaseModel
 from palgen.ingest.filter import Name
 from palgen.loaders import Loader
 from palgen.loaders.python import Python
-from palgen.util.filesystem import SuffixDict
 
 if TYPE_CHECKING:
     from palgen.modules import Modules
@@ -27,7 +26,7 @@ class ManifestSchema(BaseModel):
 class Manifest(Loader):
 
     @staticmethod
-    def ingest(sources: SuffixDict | list[Path]):
+    def ingest(sources: list[Path]):
         if isinstance(sources, list):
             for source in sources:
                 assert isinstance(source, Path)
@@ -37,11 +36,11 @@ class Manifest(Loader):
 
                 for path in source.glob('**/palgen.manifest'):
                     yield from Manifest.load(Path(path))
-
-        elif isinstance(sources, SuffixDict):
+        # TODO
+        """elif isinstance(sources, SuffixDict):
             files = Name('palgen.manifest')(sources)
             for file in files:
-                yield from Manifest.load(file)
+                yield from Manifest.load(file)"""
 
     @staticmethod
     def load(path: Path):

@@ -25,10 +25,10 @@ def handle_exception(type_, value, trace):
         trace: Exception trace
     """
     logger = logging.getLogger(__name__)
-    if logger.isEnabledFor(logging.DEBUG):
-        logger.exception("Exception occured: ", exc_info=(type_, value, trace))
-    else:
-        logger.critical("Exception occured: %s %s", type_.__name__, value)
+    #if logger.isEnabledFor(logging.DEBUG):
+    logger.exception("Exception occured: ", exc_info=(type_, value, trace))
+    #else:
+    #    logger.critical("Exception occured: %s %s", type_.__name__, value)
 
 
 sys.excepthook = handle_exception

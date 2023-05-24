@@ -11,7 +11,7 @@ from palgen.ingest.filter import Extension, Name
 from palgen.ingest.toml import Toml
 
 from palgen.util import Pipeline, setattr_default, chain_with_args
-from palgen.util.filesystem import SuffixDict, Sources
+from palgen.util.filesystem import Sources
 from palgen.util.schema import check_schema_attribute, print_validationerror, Model
 
 logger = logging.getLogger(__name__)
@@ -83,8 +83,16 @@ class Module:
             logger.debug("Generated `%s`", filename)
             yield filename
 
-    def run(self, source_tree: SuffixDict) -> list[Path]:
-        output: list[Path] = list(self.pipeline(source_tree, self))
+    def run(self, files: list[Path]) -> list[Path]:
+        """Runs the module's pipeline
+
+        Args:
+            files (list[Path]): possibly pre-filtered list of paths to consider for ingest.
+
+        Returns:
+            list[Path]: List of paths to generated files
+        """
+        output: list[Path] = list(self.pipeline(files, self))
         logger.info("Module `%s` yielded %s file%s",
                     self.name,
                     len(output),
@@ -92,6 +100,7 @@ class Module:
         return output
 
     def get_template(self, name: str, **kwargs):
+        # TODO out of class definition might be better
         return self.environment.get_template(name, **kwargs)
 
     def __init__(self, root_path: Path, out_path: Path, settings: Optional[dict] = None):
@@ -163,5 +172,6 @@ class Module:
             comment_end_string="*/",
             keep_trailing_newline=True,
         ))
+
 
 __all__ = ['Module', 'Sources']

@@ -1,15 +1,13 @@
 import importlib
 from pathlib import Path
-from typing import Type, Optional
+from typing import Type
 from abc import abstractmethod
 
-from palgen.util.filesystem import SuffixDict
-from palgen.schemas.project import ProjectSettings
 
 class Loader:
     @staticmethod
     @abstractmethod
-    def ingest(sources: SuffixDict):
+    def ingest(sources: list[Path]):
         pass
 
     @staticmethod
