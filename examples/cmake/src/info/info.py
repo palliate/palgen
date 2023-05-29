@@ -7,6 +7,7 @@ from palgen.schemas.project import ProjectSettings
 from palgen.module import Module, Sources
 from palgen.integrations.jinja2 import Template
 
+
 class Project(Module):
     ingest = Sources >> Name("info.target") >> Empty
     Settings = ProjectSettings

@@ -6,9 +6,8 @@ from typing import Any, Optional, Iterable
 from jinja2 import Environment, FileSystemLoader
 from pydantic import BaseModel, ValidationError
 
-from palgen.ingest import Nothing
+from palgen.ingest.loader import Nothing, Toml
 from palgen.ingest.filter import Extension, Name
-from palgen.ingest.toml import Toml
 
 from palgen.util import Pipeline, setattr_default, chain_with_args
 from palgen.util.filesystem import Sources
@@ -26,7 +25,7 @@ class Module:
 
     # pipelines
     ingest: Pipeline
-    pipeline: Pipeline
+    pipeline: Pipeline | dict[str, Pipeline]
 
     # set by the loader
     environment: Environment

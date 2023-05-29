@@ -24,7 +24,7 @@ class ListParam(ABC, click.ParamType):
                 else self.inner_t(val.strip())
                 for val in value.split(separator)]
 
-    def __class_getitem__(cls, inner_t):
+    def __class_getitem__(cls, inner_t) -> 'ListParam':
         assert isinstance(inner_t, type)
 
         name = f"{getattr(cls, 'name')}[{inner_t.__name__}]"
@@ -48,8 +48,7 @@ class DictParam(ABC, click.ParamType):
         for item in value.split(','):
             inner = [val.strip() for val in item.split(':')]
             if len(inner) != 2:
-                self.fail(
-                    "Dictionary item does not contain key:value mapping", param, ctx)
+                self.fail("Dictionary item does not contain key:value mapping", param, ctx)
 
             for idx, field in enumerate([self.key_t, self.value_t]):
                 if issubclass(field, str):

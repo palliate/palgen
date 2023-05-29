@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Optional
 import toml
 from pydantic import BaseModel
 
-from palgen.ingest.filter import Name
 from palgen.loaders import Loader
 from palgen.loaders.python import Python
 

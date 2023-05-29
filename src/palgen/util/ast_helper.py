@@ -3,7 +3,7 @@ import logging
 from functools import singledispatchmethod
 from pathlib import Path
 from types import ModuleType
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -252,8 +252,13 @@ class AST:
 
         self.constants[target.id] = value.value
 
-    def possible_names(self, base: type):
-        ''' yields all possible symbols referring to the target type '''
+    def possible_names(self, base: type) -> Iterable[str]:
+        """This function yields all possible symbols referring to the target type.
+        Args:
+            base (type): The type of the target
+        Yields:
+            str: for every possible symbol referring to the target type
+        """
         module, name = get_import_name(base)
         assert name, f"Target has no name {base}"
 
@@ -273,7 +278,6 @@ class AST:
                     continue
 
                 remainder = module[idx:]
-
                 if import_.real_name:
                     if remainder and remainder[0] == import_.real_name:
                         # from foo import module
@@ -286,10 +290,7 @@ class AST:
                     # from foo import class
                     remainder.append(name)
 
-                if not import_.name:
-                    yield '.'.join(remainder)
-                else:
-                    yield '.'.join([import_.name, *remainder])
+                yield '.'.join([import_.name, *remainder] if import_.name else remainder)
 
     def get_subclasses(self, base: type):
         names = list(self.possible_names(base))

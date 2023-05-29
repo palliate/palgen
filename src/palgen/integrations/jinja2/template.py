@@ -20,6 +20,7 @@ class Template(jinja2.Template):
             return environment.from_string(file.read(), template_class=cls)
 
     __call__ = jinja2.Template.render
+
     @staticmethod
     @lru_cache(maxsize=1)
     def default_environment():
@@ -32,6 +33,3 @@ class Template(jinja2.Template):
             comment_end_string="*/",
             keep_trailing_newline=True,
         )
-
-
-Template('__init__.py')

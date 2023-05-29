@@ -11,8 +11,6 @@ class PipelineMeta(type):
 
 
 class Pipeline(metaclass=PipelineMeta):
-    # TODO parallelize
-
     def __init__(self, state=None):
         self.initial_state: Optional[Iterable] = state
         self.steps: list[StepType] = []
@@ -39,7 +37,7 @@ class Pipeline(metaclass=PipelineMeta):
         assert initial_state is not None
         assert self.steps
 
-        yield from reduce(lambda state, step: self._late_bind(step, obj)(state),  # type: ignore
+        yield from reduce(lambda state, step: self._bind_step(step, obj)(state),  # type: ignore
                           [initial_state, *self.steps])
 
     def __call__(self, state: Iterable, obj: Any = None):
@@ -54,7 +52,7 @@ class Pipeline(metaclass=PipelineMeta):
         return ' >> '.join(pretty(obj) for obj in [self.initial_state or "[object]", *self.steps])
 
     @staticmethod
-    def _late_bind(fnc: Callable, obj: Any):
+    def _bind_step(fnc: Callable, obj: Any):
         if obj is None or ismethod(fnc):
             # skip if we don't have an object to bind
             # or fnc is already bound

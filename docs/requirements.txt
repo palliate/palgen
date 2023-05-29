@@ -1,0 +1,6 @@
+autoapi.extension
+furo
+sphinx-needs
+#sphinxcontrib-plantuml
+sphinxcontrib-jquery
+sphinx-test-reports

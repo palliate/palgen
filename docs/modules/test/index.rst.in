@@ -1,0 +1,8 @@
+Test
+==================================
+
+.. toctree::
+   :maxdepth: 0
+   @{for name in environments}
+   @name@
+   @{endfor}

@@ -1,0 +1,6 @@
+@target@
+==================================
+
+.. test-report:: Current master
+    :id: @target.replace('-', '_').upper()@
+    :file: build/test/@target@.xml

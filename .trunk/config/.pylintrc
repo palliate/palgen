@@ -1,7 +1,0 @@
-[MASTER]
-disable=
-    C0114,
-    E0401,  # Unable to import X; import errors are highly environment dependant
-    C0115,
-    R0903,
-    C0116

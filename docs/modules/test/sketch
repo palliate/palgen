@@ -1,0 +1,16 @@
+================ =====
+ <!-- -->         <!-- --> 
+================ =====
+@{ for name, test in tests.items() -}
+Name              @name@
+Implementation    @test.implementation@
+Version           @test.version@
+Exit Code         @test.exit_code@
+Success           @test.success@
+Duration          @test.duration@
+Packages          :code:`` @{ for dep in test.packages }
+                  @dep@
+                  @{- endfor } ``
+
+================ =====
+@{ endfor }

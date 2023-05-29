@@ -1,0 +1,58 @@
+@platform@ Test Results
+==================================
+
+
+
+**Runs**
+
+.. toctree::
+   :maxdepth: 0
+   @{for name in tests}
+   @name@
+   @{endfor}
+
+
+
+
+**Tox**
+
+================ =====
+**Platform**      @platform@
+**Tox Version**   @toxversion@
+================ =====
+
+
+**Details**
+@{- for name, test in tests.items() }
+@{- set separator = '='*(test.maxpkglen + 5)}
+@{- set color = 'green' if test.success else 'red' }
+@{- set result = 'Successful' if test.success else 'Failed'}
+
+.. list-table::
+    :widths: auto
+    :stub-columns: 1
+
+    * - Name
+      - :doc:`@name@`
+    * - Success 
+      - .. raw:: html
+           
+           <button style="color: black; border-radius: 10px; background-color: @color@;" disabled>@result@</button>
+    * - Exit Code 
+      - @test.exit_code@
+    * - Duration
+      - @test.duration@ sec
+    * - Implementation
+      - @test.implementation@
+    * - Version
+      - @test.version@
+    * - Installed packages
+      - @separator@ ========
+        Package @- ' '*(test.maxpkglen) @Version
+        @separator@ ========
+        @{- for package in test.packages }
+        @package@
+        @{- endfor }
+        @separator@ ========
+@{ endfor }
+

@@ -2,7 +2,7 @@ import sys
 import logging
 import uuid
 from importlib.util import spec_from_file_location, module_from_spec
-from typing import Optional
+from typing import Iterable, Optional
 
 from pathlib import Path
 from palgen.loaders import Loader
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class Python(Loader):
 
     @staticmethod
-    def ingest(sources: list[Path], project: Optional[ProjectSettings] = None):
+    def ingest(sources: Iterable[Path], project: Optional[ProjectSettings] = None):
         files = Extension('.py')(sources)
         for file in files:
             yield from Python.load(file, project=project)

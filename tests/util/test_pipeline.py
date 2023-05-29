@@ -1,5 +1,3 @@
-import pytest
-
 from palgen.util import Pipeline
 
 
