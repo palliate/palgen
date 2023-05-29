@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 @click.option("--toolchain", help="Generate toolchain script", is_flag=True)
 @click.option("--project", help="Generate project info script", is_flag=True)
 @click.pass_context
-def cli(ctx, outpath, toolchain, project):
+def cmake(ctx, outpath, toolchain, project):
     if toolchain:
         path = Path(__file__).parent / "palgen.cmake"
         out = Path(outpath) / "palgen.cmake"

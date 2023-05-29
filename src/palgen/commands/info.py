@@ -1,5 +1,4 @@
 import click
-
 from palgen.util.log import set_min_level
 
 

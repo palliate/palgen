@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Iterable
 
 from palgen.ingest.filter import Extension, Stem, Pattern
-from palgen.ingest.json import Json
+from palgen.ingest.loader import Json
 
 from palgen.module import Module, Sources, Model
 from palgen.integrations.jinja2.template import Template

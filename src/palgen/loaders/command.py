@@ -1,7 +1,10 @@
 import contextlib
+from functools import cached_property
 import importlib
+import itertools
 import logging
 from pathlib import Path
+from pkgutil import walk_packages
 
 import click
 from pydantic import BaseModel, ValidationError, validate_model
@@ -30,14 +33,7 @@ def init_context(ctx, config: str | Path = Path.cwd()):
 class CommandLoader(click.Group):
     def list_commands(self, ctx: click.Context) -> list[str]:
         commands = super().list_commands(ctx)
-
-        for subfolder in (Path(__file__).parent.parent / "integrations").iterdir():
-            if not subfolder.is_dir():
-                continue
-
-            name = f"palgen.integrations.{subfolder.name}.cli"
-            if self._load_builtin(name) is not None:
-                commands.append(subfolder.name)
+        commands.extend(self.builtins.keys())
 
         if not ctx.obj:
             init_context(ctx)
@@ -46,17 +42,19 @@ class CommandLoader(click.Group):
             assert isinstance(ctx.obj, Palgen)
             commands.extend(ctx.obj.modules.runnables)
 
+
         return commands
 
     def get_command(self, ctx: click.Context, cmd_name: str):
         cmd_name = cmd_name.lower()
 
         if from_group := super().get_command(ctx, cmd_name):
-            # built-in commands
+            # commands registered to the top level group
             return from_group
 
-        if from_integrations := self._load_builtin(f"palgen.integrations.{cmd_name}.cli"):
-            return from_integrations
+        if cmd_name in self.builtins:
+            # built-in commands
+            return self.builtins[cmd_name]
 
         assert isinstance(ctx.obj, Palgen)
         if cmd_name in ctx.obj.modules.runnables:
@@ -99,11 +97,37 @@ class CommandLoader(click.Group):
 
         return wrapper
 
+    @cached_property
+    def builtins(self):
+        keys = set()
+        builtins = {}
+        for (name, attr) in itertools.chain(CommandLoader._load_from("palgen.commands"),
+                                            CommandLoader._load_from("palgen.integrations")):
+            if name in keys:
+                logging.error("Duplicate command name `%s` found, skipping", name)
+                continue
+
+            keys.add(name)
+            builtins[name] = attr
+        return builtins
+
     @staticmethod
     def _load_builtin(name):
         with contextlib.suppress(ImportError):
             mod = importlib.import_module(name)
-            if hasattr(mod, "cli"):
-                return mod.cli
+            for ident, attr in mod.__dict__.items():
+                if ident.startswith('_'):
+                    continue
 
-        return None
+                if isinstance(attr, click.core.Command):
+                    yield getattr(attr, "name", ident), attr
+
+    @staticmethod
+    def _load_from(name: str):
+        with contextlib.suppress(ImportError):
+            pkg = importlib.import_module(name)
+            for module in walk_packages(path=pkg.__path__, prefix=f"{name}."):
+                if module.ispkg:
+                    continue
+
+                yield from CommandLoader._load_builtin(module.name)
