@@ -11,7 +11,12 @@ from palgen.util.typing import issubtype
 _Step = Callable[[Iterable], Iterable] | Generator[Any, Any,
                                                    Any] | partial[Callable[[Iterable], Iterable] | Generator[Any, Any, Any]]
 Step = _Step | partial[_Step]
-Task = list[Step]
+
+
+def get_name(obj):
+    if isinstance(obj, str):
+        return obj
+    return obj.__name__ if hasattr(obj, "__name__") else type(obj).__name__
 
 
 class PipelineMeta(type):
@@ -19,12 +24,31 @@ class PipelineMeta(type):
         return cls().__rshift__(step)
 
 
+class Task:
+    __slots__ = ['max_jobs', 'steps']
+
+    def __init__(self, steps: Optional[list[Step]] = None, max_jobs: int = 0):
+        self.steps: list[Step] = steps or []
+        self.max_jobs = max_jobs
+
+    def append(self, step) -> None:
+        self.steps.append(step)
+
+    def __str__(self) -> str:
+        return ' >> '.join(get_name(obj) for obj in self.steps)
+
+    def __repr__(self) -> str:
+        return f'Task(steps={self.steps}, max_jobs={self.max_jobs})'
+
+    def __bool__(self) -> bool:
+        return bool(self.steps)
+
 class Pipeline(metaclass=PipelineMeta):
     __slots__ = ['initial_state', 'tasks']
 
     def __init__(self, state=None):
         self.initial_state: Optional[Iterable] = state
-        self.tasks: list[Task] = [[]]
+        self.tasks: list[Task] = [Task()]
 
     def __rshift__(self, step: Step | type) -> 'Pipeline':
         if isinstance(step, type):
@@ -39,9 +63,14 @@ class Pipeline(metaclass=PipelineMeta):
                                            if isfunction(step) and not isgenerator(step)
                                            else getattr(step, '__call__', step))
 
-        if any(issubtype(parameter.annotation, (list, set, dict))
-               for name, parameter in step_signature.parameters.items() if name != 'self'):
-            self.tasks.append([])
+        wants_list = any(issubtype(parameter.annotation, list)
+                         for name, parameter in step_signature.parameters.items()
+                         if name != 'self')
+
+        max_jobs = getattr(step, 'max_jobs', 0)
+
+        if wants_list or max_jobs != self.tasks[-1].max_jobs:
+            self.tasks.append(Task(max_jobs=max_jobs))
 
         if isinstance(step, Pipeline) and step.initial_state is None:
             if not self.tasks[-1]:
@@ -52,14 +81,14 @@ class Pipeline(metaclass=PipelineMeta):
             self.tasks[-1].append(step)
         return self
 
-    def _run_task(self, state: Optional[Iterable] = None, obj: Any = None, task: Optional[list[Step]] = None):
+    def _run_task(self, state: Optional[Iterable] = None, obj: Any = None, task: Optional[Task] = None):
         initial_state: Optional[Iterable] = state if state is not None else self.initial_state
         assert initial_state is not None, "No initial state"
         if task is None or not initial_state:
             return []
 
         return list(reduce(lambda state, step: self._bind_step(step, obj)(state),  # type: ignore
-                           [initial_state, *task]))
+                           [initial_state, *task.steps]))
 
     def __iter__(self, state: Optional[Iterable] = None, obj: Any = None):
         if not self.tasks:
@@ -68,29 +97,33 @@ class Pipeline(metaclass=PipelineMeta):
         for task in self.tasks:
             yield from self._run_task(task, state, obj)
 
-    def __call__(self, state: list[Any], obj: Any = None, jobs: int = 1):
+    def __call__(self, state: list[Any], obj: Any = None, max_jobs: int = 1):
         output = state
-        with Pool(jobs) as pool:
+        for task in self.tasks:
+            if not output:
+                break
+
+            jobs = task.max_jobs or max_jobs
+            logging.warning("Running task with %d jobs", jobs)
+            if jobs == 1:
+                output = self._run_task(output, obj=obj, task=task)
+                continue
+
             # synchronize after every task
-            for task in self.tasks:
+            with Pool(processes=jobs) as pool:
                 chunks = [output[i::jobs] for i in range(jobs)]  # partition
                 output = []  # reset buffer
-                for chunk in pool.imap(partial(self._run_task, task=task, obj=obj), chunks):
+                for chunk in pool.imap(partial(self._run_task, obj=obj, task=task), chunks):
                     if not chunk:
                         continue
 
                     output.extend(chunk)
+                logging.warning("done with %d jobs", jobs)
         return output
 
     def __repr__(self):
-        def pretty(obj):
-            if isinstance(obj, str):
-                return obj
-            return obj.__name__ if hasattr(obj, "__name__") else type(obj).__name__
-
-        return f"{str(self.initial_state or '[object]')} >> " + \
-            ' |>> '.join(' >> '.join(pretty(obj)
-                                     for obj in task)
+        ret =f"{str(self.initial_state or '[object]')} >> " + \
+            ' |>> '.join(str(task)
                          for task in self.tasks)
 
     __str__ = __repr__
