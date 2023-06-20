@@ -5,7 +5,7 @@ from palgen.ingest.filter import Extension
 from palgen.ingest.loader import Raw
 
 
-from palgen.module import Module, Sources
+from palgen.module import Module, Sources, jobs
 
 class Preprocess(Module):
     """ Sources module help text. Spliced after the dot """
@@ -27,8 +27,10 @@ class Preprocess(Module):
         return
         yield
 
+    @jobs(1)
     def render_headers(self, data):
         logging.warning("render_headers")
+        print(len(data))
         return
         yield
 

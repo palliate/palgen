@@ -1,8 +1,10 @@
 import logging
+import sys
 import traceback
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
+import __main__
 from jinja2 import Environment, FileSystemLoader
 from pydantic import BaseModel, ValidationError
 
@@ -13,6 +15,12 @@ from palgen.util.filesystem import Sources
 from palgen.util.schema import Model, check_schema_attribute, print_validationerror
 
 logger = logging.getLogger(__name__)
+
+def jobs(max_jobs: int):
+    def wrapper(fnc):
+        fnc.max_jobs = max_jobs
+        return fnc
+    return wrapper
 
 
 class Module:
@@ -95,9 +103,9 @@ class Module:
         if isinstance(self.pipeline, dict):
             for key, pipeline in self.pipeline.items():
                 logger.debug("Running pipeline `%s`", key)
-                output.extend(pipeline(files, obj=self, jobs=jobs))
+                output.extend(pipeline(files, obj=self, max_jobs=jobs))
         else:
-            output = self.pipeline(files, obj=self, jobs=jobs)
+            output = self.pipeline(files, obj=self, max_jobs=jobs)
 
         logger.info("Module `%s` yielded %s file%s",
                     self.name,
@@ -184,3 +192,10 @@ class Module:
 
 
 __all__ = ['Module', 'Sources']
+
+if importer_path := getattr(__main__, '__file__', None):
+    if Path(importer_path).suffix == '.py':
+
+        from pprint import pprint
+        pprint(__main__.__dict__)
+        sys.exit(0)
