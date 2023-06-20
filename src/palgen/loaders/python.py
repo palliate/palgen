@@ -41,9 +41,11 @@ class Python(Loader):
             # TODO figure out if we need to load __init__.py
             return
 
-        ast = AST.load(path)
-        if not any(ast.get_subclasses(Module)):
-            logger.debug("%s does not contain Module subclasses", path)
+        try:
+            ast = AST.load(path)
+            if not any(ast.get_subclasses(Module)):
+                return
+        except UnicodeDecodeError:
             return
 
         module_name: list[str] = ["palgen", "ext"]
@@ -70,23 +72,30 @@ class Python(Loader):
         # file is pre-checked, these assertions should never fail
         assert spec, "Spec could not be loaded"
         assert spec.loader, "Spec has no loader"
+        try:
+            module = module_from_spec(spec)
+            sys.modules[name] = module
+            spec.loader.exec_module(module)
+        except ImportError as exc:
+            import traceback
+            logging.warning("Failed loading %s. Error: %s", path, exc)
 
-        module = module_from_spec(spec)
-        sys.modules[name] = module
-        spec.loader.exec_module(module)
+            if logger.isEnabledFor(logging.DEBUG):
+                traceback.print_exception(exc)
 
-        attrs = [getattr(module, attr_name)
-                 for attr_name in dir(module)
-                 if not attr_name.startswith('_')]
+        else:
+            attrs = [getattr(module, attr_name)
+                    for attr_name in dir(module)
+                    if not attr_name.startswith('_')]
 
-        for attr in attrs:
-            if not isinstance(attr, type):
-                continue
-            if not issubclass(attr, Module) or attr is Module:
-                continue
+            for attr in attrs:
+                if not isinstance(attr, type):
+                    continue
+                if not issubclass(attr, Module) or attr is Module:
+                    continue
 
-            attr.module = '.'.join(module_name[2:])
-            logger.debug("Found module `%s` (importable from `%s`). Key `%s`",
-                         attr.__name__, name, attr.name)
+                attr.module = '.'.join(module_name[2:])
+                logger.info("Found module `%s` (importable from `%s`). Key `%s`",
+                            attr.__name__, name, attr.name)
 
-            yield attr.name, attr
+                yield attr.name, attr

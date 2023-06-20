@@ -3,7 +3,12 @@ name = "cmake_example"
 version = "1.0.0"
 folders = ["src"]
 
-[sources]
-foo = "bar"
-bar = 5
-foobar = true
+#[preprocess]
+#enabled = false
+#foo = "bar"
+#bar = 5
+#foobar = true
+[test]
+name = "cmake_example"
+version = "1.0.0"
+folders = ["src"]

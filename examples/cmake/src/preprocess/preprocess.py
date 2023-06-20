@@ -1,26 +1,26 @@
 import logging
+from typing import Any
 
 from palgen.ingest.filter import Extension
-from palgen.ingest.file import Raw
+from palgen.ingest.loader import Raw
 
 
-from palgen.module import Module, Pipeline, Model
-from typing import Annotated
+from palgen.module import Module, Sources
 
-
-class Sources(Module):
+class Preprocess(Module):
     """ Sources module help text. Spliced after the dot """
 
     ingest = {
-        'headers': Pipeline >> Extension(".h") >> Raw,
-        'sources': Pipeline >> Extension(".cpp") >> Raw
+        'headers': Sources >> Extension(".h") >> Raw,
+        'sources': Sources >> Extension(".cpp") >> Raw
     }
 
-    def transform_headers(self, data):
+    def transform_headers(self, data: list):
         yield from data
 
     def validate(self, data):
         yield from data
+
 
     def render(self, data):
         logging.warning("render")

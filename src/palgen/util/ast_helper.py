@@ -253,7 +253,7 @@ class AST:
         self.constants[target.id] = value.value
 
     def possible_names(self, base: type) -> Iterable[str]:
-        """This function yields all possible symbols referring to the target type.
+        """Yields all possible symbols referring to the target type.
         Args:
             base (type): The type of the target
         Yields:

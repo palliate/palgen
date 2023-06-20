@@ -75,9 +75,8 @@ class CommandLoader(click.Group):
                        context_settings={'show_default': True})
         @click.pass_context
         def wrapper(ctx, **kwargs):
-            nonlocal module
-            parser = module(ctx.obj.root, ctx.obj.root, kwargs)
-            parser.run(ctx.obj.files)
+            nonlocal key
+            ctx.obj.run(key, kwargs)
 
         if key in palgen.settings:
             assert issubclass(module.Settings, BaseModel)
@@ -92,7 +91,6 @@ class CommandLoader(click.Group):
             if key in palgen.settings and field in palgen.settings[key]:
                 options["required"] = False
                 options["default"] = palgen.settings[key][field]
-
             wrapper = click.option(f'--{field}', **options)(wrapper)
 
         return wrapper

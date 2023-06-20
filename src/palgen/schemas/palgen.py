@@ -1,3 +1,4 @@
+import os
 from typing import Optional
 from pydantic import BaseModel
 from pathlib import Path
@@ -20,3 +21,4 @@ class PalgenSettings(BaseModel):
     output: Optional[str] = None
     folders: list[str] = []
     modules: ModuleSettings = ModuleSettings()
+    jobs: Optional[int] = os.cpu_count() or 1

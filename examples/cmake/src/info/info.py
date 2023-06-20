@@ -1,7 +1,7 @@
 import logging
 
 from palgen.ingest.filter import Name
-from palgen.ingest.file import Empty
+from palgen.ingest.loader import Empty
 
 from palgen.schemas.project import ProjectSettings
 from palgen.module import Module, Sources
@@ -12,7 +12,7 @@ class Project(Module):
     ingest = Sources >> Name("info.target") >> Empty
     Settings = ProjectSettings
 
-    def validate(self, data):
+    def validate(self, data: list):
         yield from data
 
     def render(self, data):

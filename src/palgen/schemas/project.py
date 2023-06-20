@@ -1,13 +1,15 @@
-from typing import Optional, Annotated
-from pydantic import Field
-from palgen.util.schema import Model
 from pathlib import Path
+from typing import Annotated, Optional
+
+from pydantic import Field
+
+from palgen.util.schema import Model
+
 
 class ProjectSettings(Model):
-    name: str
-    version: str = Field(regex=r'[0-9.]+$')
-    description: Optional[str] = ""
+    name:        Annotated[str, "Project name"]
+    version:     Annotated[str, Field(regex=r"^[0-9.]+$"), "Version number"]
+    description: Annotated[Optional[str], "Project description"] = ""
 
-    output: Optional[str] = None
-    #folders: Annotated[list[str], "Source folders"] = [] # TODO
-    folders: list[Path] = []
+    output:      Annotated[Optional[str], "Output folder"] = None
+    folders:     Annotated[list[Path], "Source folders"] = []

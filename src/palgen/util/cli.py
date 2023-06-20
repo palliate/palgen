@@ -1,5 +1,6 @@
 from abc import ABC
-from typing import Annotated, get_args, get_origin, get_type_hints
+from types import UnionType
+from typing import Annotated, Optional, Union, get_args, get_origin, get_type_hints
 
 import click
 
@@ -74,12 +75,13 @@ def extract_help(hint) -> str:
     assert get_origin(hint) is Annotated
 
     _, *args = get_args(hint)
-    return "" if len(args) > 1 or not isinstance(args[0], str) else args[0]
+    return next((hint for hint in args if isinstance(hint, str)), "")
 
 def pydantic_to_click(cls: type):
     hints = get_type_hints(cls, include_extras=True)
 
     for key, field in getattr(cls, "__fields__").items():
+
         options = {
             'type': field.type_,
             'required': field.required,
@@ -87,18 +89,28 @@ def pydantic_to_click(cls: type):
         }
 
         if hint := hints.get(key):
-            if (origin := get_origin(hint)) is Annotated:
+            if get_origin(hint) is Annotated:
                 type_, *_ = get_args(hint)
                 options['help'] = extract_help(hint)
                 options['type'] = type_
 
+            origin = get_origin(options['type'])
+
+            if origin in (Union, UnionType):
+                args = get_args(options['type'])
+                if len(args) != 2 or type(None) not in args:
+                    raise TypeError("Unions other than Optional are not supported at the moment.")
+
+                options['required'] = False
+                options['type'] = args[isinstance(args[0], type(None))]
+
             elif origin is list:
-                inner_type, *rest = get_args(hint)
+                inner_type, *rest = get_args(options['type'])
                 assert len(rest) == 0
                 options['type'] = ListParam[inner_type]
 
             elif origin is dict:
-                key_t, val_t, *rest = get_args(hint)
+                key_t, val_t, *rest = get_args(options['type'])
                 assert len(rest) == 0
                 options['type'] = DictParam[key_t, val_t]
 
@@ -107,4 +119,5 @@ def pydantic_to_click(cls: type):
 
         if options['type'] is bool:
             options['is_flag'] = True
+
         yield key, options

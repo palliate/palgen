@@ -1,17 +1,16 @@
-import traceback
 import logging
+import traceback
 from pathlib import Path
-from typing import Any, Optional, Iterable
+from typing import Any, Iterable, Optional
 
 from jinja2 import Environment, FileSystemLoader
 from pydantic import BaseModel, ValidationError
 
-from palgen.ingest.loader import Nothing, Toml
 from palgen.ingest.filter import Extension, Name
-
-from palgen.util import Pipeline, setattr_default, chain_with_args
+from palgen.ingest.loader import Nothing, Toml
+from palgen.util import Pipeline, setattr_default
 from palgen.util.filesystem import Sources
-from palgen.util.schema import check_schema_attribute, print_validationerror, Model
+from palgen.util.schema import Model, check_schema_attribute, print_validationerror
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +23,7 @@ class Module:
     private: bool
 
     # pipelines
-    ingest: Pipeline
+    ingest: Pipeline | dict[str, Pipeline]
     pipeline: Pipeline | dict[str, Pipeline]
 
     # set by the loader
@@ -82,7 +81,7 @@ class Module:
             logger.debug("Generated `%s`", filename)
             yield filename
 
-    def run(self, files: list[Path]) -> list[Path]:
+    def run(self, files: list[Path], jobs: int) -> list[Path]:
         """Runs the module's pipeline
 
         Args:
@@ -91,7 +90,15 @@ class Module:
         Returns:
             list[Path]: List of paths to generated files
         """
-        output: list[Path] = list(self.pipeline(files, self))
+        output: list[Path] = []
+
+        if isinstance(self.pipeline, dict):
+            for key, pipeline in self.pipeline.items():
+                logger.debug("Running pipeline `%s`", key)
+                output.extend(pipeline(files, obj=self, jobs=jobs))
+        else:
+            output = self.pipeline(files, obj=self, jobs=jobs)
+
         logger.info("Module `%s` yielded %s file%s",
                     self.name,
                     len(output),
@@ -102,11 +109,15 @@ class Module:
         # TODO out of class definition might be better
         return self.environment.get_template(name, **kwargs)
 
-    def __init__(self, root_path: Path, out_path: Path, settings: Optional[dict] = None):
+    def __init__(self, root_path: Path, out_path: Path, settings: Optional[dict[str, Any]] = None):
         self.root_path = root_path
         self.out_path = out_path
+
+        if settings is None:
+            return
+
         try:
-            self.settings = self.Settings.parse_obj(settings)
+            self.settings = self.Settings(**settings)
             logger.debug("Validated settings for %s", self.name)
 
         except ValidationError as ex:
@@ -134,27 +145,26 @@ class Module:
         if not hasattr(cls, "pipeline"):
             match ingest:
                 case Pipeline():
-                    setattr(cls, "pipeline", Pipeline >> ingest
-                                                      >> cls.transform
-                                                      >> cls.validate
-                                                      >> cls.render
-                                                      >> cls.write)
+                    setattr(cls, "pipeline", Pipeline() >> ingest
+                                                        >> cls.transform
+                                                        >> cls.validate
+                                                        >> cls.render
+                                                        >> cls.write)
                 case None:
-                    setattr(cls, "pipeline", Pipeline >> Nothing)
+                    setattr(cls, "pipeline", Pipeline() >> Nothing)
                 case dict():
-                    pipelines = []
+                    pipelines = {}
                     for key, value in ingest.items():
                         pipeline = Pipeline >> value
                         for fnc in 'transform', 'validate', 'render':
                             name = f"{fnc}_{key}"
                             pipeline >>= getattr(cls, name, getattr(cls, fnc))
                         pipeline >>= cls.write
-                        pipelines.append(pipeline)
+                        pipelines[key] = pipeline
                     logging.debug("Pipelines: \n%s",
-                                  '\n'.join(f'    {str(p)}' for p in pipelines))
+                                  '\n'.join(f'    {k}: {str(v)}' for k,v in pipelines.items()))
 
-                    setattr(cls, "pipeline", lambda _, sources, obj:
-                            chain_with_args(pipelines, sources, obj))
+                    setattr(cls, "pipeline", pipelines)
                 case _:
                     raise RuntimeError("Invalid ingest")
 

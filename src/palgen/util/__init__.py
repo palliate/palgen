@@ -11,7 +11,10 @@ def setattr_default(cls: type, name: str, default: Any):
         setattr(cls, name, default)
 
 
-def chain_with_args(generators, *args, **kwargs):
+def chain_with_args(*args, generators=None, **kwargs):
+    if not generators:
+        return
+    print(f"{args=} {kwargs=} {generators=}")
     for generator in generators:
         yield from generator(*args, **kwargs)
 
@@ -27,3 +30,15 @@ def get_caller() -> traceback.FrameSummary:
 def get_caller_path() -> Path:
     frame = traceback.extract_stack(limit=3)[-3]
     return Path(frame.filename)
+
+class MockAttributes:
+    __slots__ = ['_items']
+    def __init__(self, **kwargs) -> None:
+        self._items = kwargs
+
+    def __getattribute__(self, name: str) -> Any:
+        items = object.__getattribute__(self, '_items')
+        if name in items:
+            return items.get(name)
+
+        return object.__getattribute__(self, name)

@@ -71,7 +71,7 @@ class Palgen:
 
     @cached_property
     def modules(self) -> Modules:
-        #if not self.options.modules.extra_folders:
+        # if not self.options.modules.extra_folders:
         #    # disable conan integration when extra dirs are provided
 
         #    from palgen.integrations.conan.dependencies import get_paths
@@ -98,26 +98,31 @@ class Palgen:
         path = Path(folder)
         return path if path.is_absolute() else self.root / path
 
-    def run(self):
+    def run(self, name: str, settings: dict):
+        if name not in self.modules.runnables:
+            logger.warning("Module `%s` not found.", name)
+            return []
+
+        module = self.modules.runnables[name](self.root, self.output, settings)
+        logger.info("Running module `%s` with %d jobs", module.name, self.options.jobs or 1)
+
+        try:
+            return module.run(self.files, self.options.jobs or 1)
+        except Exception as exception:
+            logger.exception("Running failed: %s: %s",
+                             type(exception).__name__, exception)
+            raise SystemExit(0) from exception
+
+    def run_all(self):
         generated: list[Path] = []
-        for template, settings in self.settings.items():
-            if template not in self.modules.runnables:
-                if template not in ('palgen', 'project'):
-                    logger.warning("Module `%s` not found.", template)
+        for name, settings in self.settings.items():
+
+            if name not in self.modules.runnables \
+                    and name not in ('palgen', 'project'):
+                logger.warning("Module `%s` not found.", name)
                 continue
 
-            if parser := self.modules.runnables[template]:
-
-                module = parser(self.root, self.output, settings)
-                logger.info("Running module `%s`", module.name)
-                try:
-                    generated.extend(module.run(self.files))
-                except Exception as exception:
-                    logger.exception(
-                        "Generating failed: %s: %s", type(
-                            exception).__name__, exception
-                    )
-                    raise SystemExit(0) from exception
+            generated.extend(self.run(name, settings))
 
         logger.info("Generated %d files.", len(generated))
 
