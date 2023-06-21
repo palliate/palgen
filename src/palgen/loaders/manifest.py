@@ -35,11 +35,6 @@ class Manifest(Loader):
 
                 for path in source.glob('**/palgen.manifest'):
                     yield from Manifest.load(Path(path))
-        # TODO
-        """elif isinstance(sources, SuffixDict):
-            files = Name('palgen.manifest')(sources)
-            for file in files:
-                yield from Manifest.load(file)"""
 
     @staticmethod
     def load(path: Path):

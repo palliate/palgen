@@ -16,6 +16,7 @@ from palgen.util.schema import Model, check_schema_attribute, print_validationer
 
 logger = logging.getLogger(__name__)
 
+
 def jobs(max_jobs: int):
     def wrapper(fnc):
         fnc.max_jobs = max_jobs
@@ -89,7 +90,7 @@ class Module:
             logger.debug("Generated `%s`", filename)
             yield filename
 
-    def run(self, files: list[Path], jobs: int) -> list[Path]:
+    def run(self, files: list[Path], jobs: Optional[int] = None) -> list[Path]:
         """Runs the module's pipeline
 
         Args:
@@ -116,6 +117,23 @@ class Module:
     def get_template(self, name: str, **kwargs):
         # TODO out of class definition might be better
         return self.environment.get_template(name, **kwargs)
+
+    @classmethod
+    def to_string(cls) -> str:
+        # TODO stringify Settings and Schema properly
+        return f"""\
+Name:        {cls.name}
+Module:      palgen.ext.{cls.module}
+Private:     {cls.private}
+Description: {cls.__doc__ or ""}
+
+Options:     {cls.Settings}
+Schema:      {cls.Schema}
+
+Pipeline(s): {cls.pipeline}"""
+
+    def __str__(self) -> str:
+        return self.to_string()
 
     def __init__(self, root_path: Path, out_path: Path, settings: Optional[dict[str, Any]] = None):
         self.root_path = root_path
@@ -170,7 +188,7 @@ class Module:
                         pipeline >>= cls.write
                         pipelines[key] = pipeline
                     logging.debug("Pipelines: \n%s",
-                                  '\n'.join(f'    {k}: {str(v)}' for k,v in pipelines.items()))
+                                  '\n'.join(f'    {k}: {str(v)}' for k, v in pipelines.items()))
 
                     setattr(cls, "pipeline", pipelines)
                 case _:
@@ -192,10 +210,3 @@ class Module:
 
 
 __all__ = ['Module', 'Sources']
-
-if importer_path := getattr(__main__, '__file__', None):
-    if Path(importer_path).suffix == '.py':
-
-        from pprint import pprint
-        pprint(__main__.__dict__)
-        sys.exit(0)

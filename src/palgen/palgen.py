@@ -59,14 +59,13 @@ class Palgen:
             list[Path]
         """
         discovered = []
-
         for folder in self.project.folders:
             path: Path = self._path_for(folder)
             if not path.exists():
                 logger.warning("Folder not found: %s. Skipping.", path)
                 continue
 
-            discovered.extend(list(walk(path, gitignore(self.root))))
+            discovered.extend(list(walk(path, gitignore(self.root), jobs=self.options.jobs)))
         return discovered
 
     @cached_property
@@ -117,9 +116,9 @@ class Palgen:
         generated: list[Path] = []
         for name, settings in self.settings.items():
 
-            if name not in self.modules.runnables \
-                    and name not in ('palgen', 'project'):
-                logger.warning("Module `%s` not found.", name)
+            if name not in self.modules.runnables:
+                if  name not in ('palgen', 'project'):
+                    logger.warning("Module `%s` not found.", name)
                 continue
 
             generated.extend(self.run(name, settings))

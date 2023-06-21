@@ -1,21 +1,35 @@
 import click
+from palgen.palgen import Palgen
 from palgen.util.log import set_min_level
 
 
 @click.command()
 @click.option("-f", "--full", help="Search for templates and inputs.", is_flag=True)
-@click.pass_context
-def info(ctx, full):
-    """Print project info and exit."""
+@click.argument('module', required=False)
+@click.pass_obj
+def info(obj: Palgen, full, module):
+    """Print project or module info and exit."""
     set_min_level(3)
+    assert isinstance(obj, Palgen)
+
+    if module is not None:
+        mod = obj.modules.runnables[module]
+        print(mod.to_string())
+        return
+
     text = f"""\
-Name:        {ctx.obj.project.name}
-Description: {ctx.obj.project.description}
-Version:     {ctx.obj.project.version}"""
+Name:        {obj.project.name}
+Description: {obj.project.description}
+Version:     {obj.project.version}"""
 
     if full:
         text += f"""
 
-Templates:   {list(ctx.obj.modules.keys())}"""
+Runnable:    {', '.join(obj.modules.runnables)}
+Exportable:  {', '.join(obj.modules.runnables)}
+
+Public:      {', '.join(obj.modules.public)}
+Private:     {', '.join(obj.modules.private)}
+"""
         # Subprojects: {list(ctx.obj.subprojects.keys())}
     print(text)

@@ -1,7 +1,7 @@
 from functools import reduce, partial
 import inspect
 import logging
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
 from typing import Generator, Optional, Callable, Iterable, Any
 from inspect import isgenerator, signature, ismethod, isfunction
 import typing
@@ -95,18 +95,18 @@ class Pipeline(metaclass=PipelineMeta):
             return
 
         for task in self.tasks:
-            yield from self._run_task(task, state, obj)
+            yield from self._run_task(state=state, obj=obj, task=task)
 
-    def __call__(self, state: list[Any], obj: Any = None, max_jobs: int = 1):
+    def __call__(self, state: list[Any], obj: Any = None, max_jobs: Optional[int] = None):
         output = state
         for task in self.tasks:
             if not output:
                 break
 
-            jobs = task.max_jobs or max_jobs
-            logging.warning("Running task with %d jobs", jobs)
+            jobs = task.max_jobs or max_jobs or cpu_count()
+
             if jobs == 1:
-                output = self._run_task(output, obj=obj, task=task)
+                output = self._run_task(state=output, obj=obj, task=task)
                 continue
 
             # synchronize after every task
@@ -118,11 +118,10 @@ class Pipeline(metaclass=PipelineMeta):
                         continue
 
                     output.extend(chunk)
-                logging.warning("done with %d jobs", jobs)
         return output
 
     def __repr__(self):
-        ret =f"{str(self.initial_state or '[object]')} >> " + \
+        return f"{str(self.initial_state or '[object]')} >> " + \
             ' |>> '.join(str(task)
                          for task in self.tasks)
 

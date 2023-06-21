@@ -54,6 +54,16 @@ def walk(path: Path, ignores: PathSpec, jobs: Optional[int] = None) -> Iterable[
         Iterable[Path]: An iterable object representing the files and folders found in the directory.
     """
     tasks, output = _walk_worker((path, ignores))
+    if jobs == 1:
+        while tasks:
+            _tasks = []
+            for task in tasks:
+                new_tasks, new_output = _walk_worker(task)
+                _tasks.extend(new_tasks)
+                output.extend(new_output)
+            tasks = _tasks
+        return output
+
     with Pool(processes=jobs) as pool:
         while tasks:
             ret = pool.map(_walk_worker, tasks)
@@ -95,3 +105,12 @@ def _walk_worker(args: tuple[Path, PathSpec]):
         if entry.is_dir():
             folders.append((entry, ignores))
     return folders, entries
+
+def find_backwards(filename: str, source_dir: Optional[Path] = None) -> Path:
+    current_dir: Path = source_dir or Path.cwd()
+    while current_dir:
+        if (file_path := current_dir / filename).exists():
+            return file_path
+        current_dir = current_dir.parent
+
+    raise FileNotFoundError(f"{filename} not found in parent directories.")
