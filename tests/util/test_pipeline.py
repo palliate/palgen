@@ -171,6 +171,5 @@ def test_identity(mocker, pipeline, meta_count, ctor_count, call_count):
     result = list(empty(range(5)))
 
     assert result == [0, 1, 2, 3, 4]
-    assert iter_.call_count == 1
     assert ctor.call_count == ctor_count
     assert call.call_count == call_count

@@ -12,7 +12,7 @@ from pydantic.errors import MissingError
 
 from palgen.module import Module
 from palgen.palgen import Palgen
-from palgen.util.cli import pydantic_to_click
+from palgen.cli.util import pydantic_to_click
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +99,7 @@ class CommandLoader(click.Group):
     def builtins(self):
         keys = set()
         builtins = {}
-        for (name, attr) in itertools.chain(CommandLoader._load_from("palgen.commands"),
+        for (name, attr) in itertools.chain(CommandLoader._load_from("palgen.cli.commands"),
                                             CommandLoader._load_from("palgen.integrations")):
             if name in keys:
                 logging.error("Duplicate command name `%s` found, skipping", name)

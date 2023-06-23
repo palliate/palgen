@@ -6,8 +6,8 @@ from typing import Optional
 import click
 
 from palgen.palgen import Palgen
-from palgen.loaders.command import CommandLoader, init_context
-from palgen.util.cli import ListParam
+from palgen.cli.loader import CommandLoader, init_context
+from palgen.cli.util import ListParam
 from palgen.util.log import set_min_level
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 @click.option("--extra-folders", default=[], type=ListParam[Path])
 @click.option("--dependencies", default=None, type=Path)
 @click.pass_context
-def cli(ctx, debug: bool, version: bool, config: Path, extra_folders: str, dependencies: Optional[Path], jobs: int):
+def main(ctx, debug: bool, version: bool, config: Path, extra_folders: str, dependencies: Optional[Path], jobs: int):
     if version:
         from palgen import __version__
         print(f"palgen {__version__}")

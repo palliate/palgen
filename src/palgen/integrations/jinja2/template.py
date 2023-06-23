@@ -9,7 +9,7 @@ import jinja2
 class Template(jinja2.Template):
     def __new__(cls, filename: Path | str,
                 environment: Optional[jinja2.Environment] = None,
-                encoding: Optional[str] = 'utf-8') -> 'Template':
+                encoding: Optional[str] = 'utf-8') -> 'jinja2.Template':
 
         frame = traceback.extract_stack(limit=2)[-2]
         path = Path(frame.filename).parent

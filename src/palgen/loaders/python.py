@@ -33,19 +33,27 @@ class Python(Loader):
         return module_name
 
     @staticmethod
-    def load(path: Path, project: Optional[ProjectSettings] = None, import_name: Optional[str] = None):
-        if project is not None and import_name is not None:
-            raise RuntimeError("expected project or import_name, not both.")
-
+    def check_candidate(path: Path) -> bool:
         if path.name.startswith('_'):
-            # TODO figure out if we need to load __init__.py
-            return
+            return False
 
         try:
             ast = AST.load(path)
             if not any(ast.get_subclasses(Module)):
-                return
+                return False
+
         except UnicodeDecodeError:
+            logger.warning("Could not decode file %s", path)
+            return False
+
+        return True
+
+    @staticmethod
+    def load(path: Path, project: Optional[ProjectSettings] = None, import_name: Optional[str] = None):
+        if project is not None and import_name is not None:
+            raise RuntimeError("expected project or import_name, not both.")
+
+        if not Python.check_candidate(path):
             return
 
         module_name: list[str] = ["palgen", "ext"]

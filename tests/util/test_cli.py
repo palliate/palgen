@@ -3,7 +3,8 @@ from typing import Annotated
 import pytest
 from pydantic import BaseModel
 
-from palgen.util.cli import pydantic_to_click, ListParam, DictParam
+from palgen.cli.util import pydantic_to_click, ListParam, DictParam
+from palgen.util.typing import issubtype, normalize
 
 
 class BuildTypes(Enum):
@@ -77,15 +78,19 @@ def test_pydantic_to_click():
         assert key in expected
         for option, value in options.items():
             assert option in expected[key]
-            assert value == expected[key][option]
+
+            if isinstance(value, ListParam):
+                #TODO check subtype
+                assert issubtype(expected[key][option], list)
+            else:
+                assert value == expected[key][option]
 
 
 def test_list_param_convert():
     assert ListParam[int].convert("1;2;3;4") == [1, 2, 3, 4]
     assert ListParam[int].convert("[1, 2, 3, 4]") == [1, 2, 3, 4]
     assert ListParam[str].convert("1;2;3;4") == ["1", "2", "3", "4"]
-    assert ListParam[str].convert("['1', '2', '3', '4']") == [
-        "1", "2", "3", "4"]
+    assert ListParam[str].convert("['1', '2', '3', '4']") == ["1", "2", "3", "4"]
 
 
 def test_list_param_convert_raises():

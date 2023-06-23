@@ -1,15 +1,16 @@
 from functools import reduce, partial
 import inspect
 import logging
-from multiprocessing import Pool, cpu_count
+from multiprocess.pool import Pool
+from multiprocessing import cpu_count
 from typing import Generator, Optional, Callable, Iterable, Any
 from inspect import isgenerator, signature, ismethod, isfunction
 import typing
 
 from palgen.util.typing import issubtype
 
-_Step = Callable[[Iterable], Iterable] | Generator[Any, Any,
-                                                   Any] | partial[Callable[[Iterable], Iterable] | Generator[Any, Any, Any]]
+_Step = Callable[[Iterable], Iterable] | Generator[Any, Any, Any] | \
+        partial[Callable[[Iterable], Iterable] | Generator[Any, Any, Any]]
 Step = _Step | partial[_Step]
 
 
@@ -42,6 +43,7 @@ class Task:
 
     def __bool__(self) -> bool:
         return bool(self.steps)
+
 
 class Pipeline(metaclass=PipelineMeta):
     __slots__ = ['initial_state', 'tasks']
@@ -119,6 +121,8 @@ class Pipeline(metaclass=PipelineMeta):
 
                     output.extend(chunk)
         return output
+
+    run = __call__
 
     def __repr__(self):
         return f"{str(self.initial_state or '[object]')} >> " + \

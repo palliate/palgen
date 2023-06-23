@@ -1,10 +1,8 @@
 import logging
-import sys
 import traceback
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
-import __main__
 from jinja2 import Environment, FileSystemLoader
 from pydantic import BaseModel, ValidationError
 
