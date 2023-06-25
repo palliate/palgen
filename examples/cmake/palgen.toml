@@ -1,4 +1,13 @@
+[palgen]
+output = "build"
+
+[palgen.modules]
+folders = ["modules"]
+inline = true
+
 [project]
 name = "cmake_example"
 version = "1.0.0"
-folders = ["src"]
+sources = ["src"]
+
+[fstring]

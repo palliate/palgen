@@ -21,5 +21,8 @@ project(
   VERSION "${TARGET_VERSION}"
   LANGUAGES CXX)
 
-add_executable(${TARGET} src/main.cpp)
+add_executable(${TARGET} "")
+set_property(TARGET ${TARGET} PROPERTY CXX_STANDARD 20)
+
 palgen_run(${TARGET})
+target_sources(${TARGET} PUBLIC ${CMAKE_BINARY_DIR}/src/main.cpp)

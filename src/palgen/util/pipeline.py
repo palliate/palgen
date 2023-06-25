@@ -128,8 +128,8 @@ class Pipeline(metaclass=PipelineMeta):
     run = __call__
 
     def __repr__(self):
-        return f"{str(self.initial_state or '[object]')} >> " + \
-            ' |>> '.join(f"{task} ({task.max_jobs})"
+        return f"{str(self.initial_state or '[object]')} " + \
+            ' |'.join(f"{task.max_jobs or cpu_count()}>> {task}"
                          for task in self.tasks)
 
     __str__ = __repr__

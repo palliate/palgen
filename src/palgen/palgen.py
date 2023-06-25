@@ -64,7 +64,10 @@ class Palgen:
         Returns:
             list[Path]
         """
-        return discover(self.project.sources, gitignore(self.root), jobs=self.options.jobs)
+        files: list[Path] = discover(self.project.sources, gitignore(self.root), jobs=self.options.jobs)
+        if not files:
+            logger.warning("No source files detected.")
+        return files
 
     @cached_property
     def modules(self) -> Modules:

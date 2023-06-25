@@ -1,9 +1,14 @@
-#include <iostream>
-#include "generated/info.h"
+#include <cstdio>
+#include <format>
+#include "info.h"
+
+//workaround to fix syntax highlighting
+#define f
 
 int main() {
-    std::cout 
-        << "Name:        " << project_info.name        << '\n'
-        << "Version:     " << project_info.version     << '\n'
-        << "Description: " << project_info.description << '\n';
+    puts(fR"""(Project info:
+        Name:        {project_info.name}
+        Version:     {project_info.version})""");
+    puts(f"\
+        Description: {project_info.description}");
 }

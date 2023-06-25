@@ -45,6 +45,12 @@ class Raw(Ingest):
             yield file, file.read_bytes()
 
 
+class Text(Ingest):
+    def ingest(self, files: Iterable[Path]) -> Iterable[tuple[Path, str]]:
+        for file in files:
+            yield file, file.read_text()
+
+
 class Json(Ingest):
     def ingest(self, files: Iterable[Path]):
         import json

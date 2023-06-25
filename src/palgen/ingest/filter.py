@@ -1,7 +1,7 @@
 import fnmatch
 import re
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Iterable
 
 
 class Filter:
@@ -136,3 +136,6 @@ class Name(Filter):
             Path: for every file that matches any of the needles
         """
         yield from self.match_files(files, 'name')
+
+def Passthrough(data: Iterable[Any]) -> Iterable[Any]:
+    yield from data
