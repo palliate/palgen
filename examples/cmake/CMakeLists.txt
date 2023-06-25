@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
 set(CMAKE_VERBOSE_MAKEFILE ON)
-
 if(NOT EXISTS ${CMAKE_BINARY_DIR}/palgen.cmake)
     message(STATUS "palgen: CMake helper not found, generating.")
     execute_process(
@@ -25,4 +24,5 @@ add_executable(${TARGET} "")
 set_property(TARGET ${TARGET} PROPERTY CXX_STANDARD 20)
 
 palgen_run(${TARGET})
-target_sources(${TARGET} PUBLIC ${CMAKE_BINARY_DIR}/src/main.cpp)
+target_sources(${TARGET} PRIVATE ${CMAKE_BINARY_DIR}/src/main.cpp)
+target_include_directories(${TARGET} PRIVATE ${CMAKE_BINARY_DIR}/src)

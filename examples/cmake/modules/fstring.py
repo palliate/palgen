@@ -15,10 +15,8 @@ class FString(Module):
                                 r"((R\"(?P<delimiter>.*)\((?P<raw>(\n|.)*?)\)\6\")|"
                                 r"(\"(?P<literal>((\\[\"\n])|[^\"\n])*)\"))")
 
-    replacement_pattern = re.compile(r"((?<!{)|{{){"
-                                     r"(?P<variable>([\w_.()]*?|::)*)?"
-                                     r"(?P<format_spec>:[^}]+)?"
-                                     r"}")
+    replacement_pattern = re.compile(r"((?<!{)|{{){(?P<variable>(::|[\w_.()$])*)"
+                                     r"(?P<format_spec>:[^}]*)?}")
 
     def validate(self, data):
         yield from data
