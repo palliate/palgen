@@ -1,16 +1,19 @@
-from functools import reduce, partial
 import inspect
+from functools import partial, reduce
+from inspect import isfunction, isgenerator, ismethod, signature
 import logging
-from multiprocess.pool import Pool
 from multiprocessing import cpu_count
-from typing import Generator, Optional, Callable, Iterable, Any
-from inspect import isgenerator, signature, ismethod, isfunction
-import typing
+from typing import Any, Callable, Generator, Iterable, Optional
+
+from multiprocessing.pool import Pool
 
 from palgen.util.typing import issubtype
 
+logger = logging.getLogger(__name__)
+
+
 _Step = Callable[[Iterable], Iterable] | Generator[Any, Any, Any] | \
-        partial[Callable[[Iterable], Iterable] | Generator[Any, Any, Any]]
+    partial[Callable[[Iterable], Iterable] | Generator[Any, Any, Any]]
 Step = _Step | partial[_Step]
 
 
@@ -68,8 +71,7 @@ class Pipeline(metaclass=PipelineMeta):
         wants_list = any(issubtype(parameter.annotation, list)
                          for name, parameter in step_signature.parameters.items()
                          if name != 'self')
-
-        max_jobs = getattr(step, 'max_jobs', 0)
+        max_jobs = getattr(step, 'max_jobs', 1 if wants_list else 0)
 
         if wants_list or max_jobs != self.tasks[-1].max_jobs:
             self.tasks.append(Task(max_jobs=max_jobs))
@@ -113,6 +115,7 @@ class Pipeline(metaclass=PipelineMeta):
 
             # synchronize after every task
             with Pool(processes=jobs) as pool:
+                logger.debug("Running with %d jobs", jobs)
                 chunks = [output[i::jobs] for i in range(jobs)]  # partition
                 output = []  # reset buffer
                 for chunk in pool.imap(partial(self._run_task, obj=obj, task=task), chunks):
@@ -126,7 +129,7 @@ class Pipeline(metaclass=PipelineMeta):
 
     def __repr__(self):
         return f"{str(self.initial_state or '[object]')} >> " + \
-            ' |>> '.join(str(task)
+            ' |>> '.join(f"{task} ({task.max_jobs})"
                          for task in self.tasks)
 
     __str__ = __repr__

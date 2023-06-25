@@ -31,7 +31,7 @@ def run_directly(module_path: Path):
         sys.exit(0)
 
     for key, value in module.items():
-        generated = obj.run(value.name, obj.settings[key])
+        generated = obj.run(value.name, obj.settings[key] if key in obj.settings else {})
         logger.info("Generated %d files.", len(generated))
 
 

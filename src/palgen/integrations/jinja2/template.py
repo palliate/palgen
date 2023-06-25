@@ -17,7 +17,11 @@ class Template(jinja2.Template):
         with open(path / filename, 'r', encoding=encoding) as file:
             if environment is None:
                 environment = Template.default_environment()
-            return environment.from_string(file.read(), template_class=cls)
+            template = environment.from_string(file.read(), template_class=cls)
+
+            # patch in call operator
+            setattr(template, '__call__', template.render)
+            return template
 
     __call__ = jinja2.Template.render
 

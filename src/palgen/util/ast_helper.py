@@ -122,6 +122,7 @@ class AST:
         self.constants: dict[str, Any] = {}
         self.imports: list[Import] = []
         self.classes: list[Class] = []
+        self.path: Optional[Path] = None
 
         self.visit(self.tree)
 
@@ -149,7 +150,9 @@ class AST:
             AST: parsed AST
         """
         with open(path, 'r', encoding=encoding) as input_file:
-            return cls.parse(input_file.read())
+            new_ast = cls.parse(input_file.read())
+            new_ast.path = Path(path)
+            return new_ast
 
     @singledispatchmethod
     def visit(self, node: ast.AST) -> None:

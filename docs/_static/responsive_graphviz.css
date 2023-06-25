@@ -1,0 +1,3 @@
+body {
+    --md-graphviz-edge-color: var(--color-content-foreground);
+}

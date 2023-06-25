@@ -23,13 +23,10 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.intersphinx',
     'sphinx.ext.autodoc.typehints',
-    'sphinx.ext.todo',  # todo
 
     'sphinx.ext.graphviz',
     'sphinx.ext.inheritance_diagram',
 
-    'sphinx.ext.autosectionlabel',  # todo
-    # 'sphinxcontrib.restbuilder',
     'autoapi.extension',
 
     'sphinxcontrib.jquery',
@@ -37,12 +34,14 @@ extensions = [
     'sphinx_needs',
 
     'sphinxcontrib.test_reports',
-    'sphinxcontrib.plantuml'
+    'sphinxcontrib.plantuml',
+    'sphinx_immaterial.graphviz'
 ]
 
 templates_path = ['docs/_templates']
+autoapi_template_dir = 'docs/_templates'
 root_doc = "index"
-exclude_patterns = ['*/build/', '*/venv/', '*/dist/', '*/.tox/']
+exclude_patterns = ['build/*', 'venv/*', 'dist/*', '.tox/*']
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -62,6 +61,7 @@ html_sidebars = {
 }
 html_static_path = ['docs/_static']
 html_theme_options: dict[str, Any] = {
+    "font": False,
     "footer_icons": [
         {
             "name": "GitHub",
@@ -79,9 +79,11 @@ html_theme_options: dict[str, Any] = {
     "source_directory": "docs/",
 }
 
-# -- Extension configuration -------------------------------------------------
+html_css_files = [
+    'responsive_graphviz.css',
+]
 
-todo_include_todos = True
+# -- Extension configuration -------------------------------------------------
 
 napoleon_numpy_docstring = False
 napoleon_include_private_with_doc = True
@@ -98,7 +100,8 @@ intersphinx_mapping = {
 }
 
 autoapi_root = 'reference/'
-autoapi_dirs = ['src']
+autoapi_dirs = ['src/palgen']
+autoapi_file_patterns = ['*.py']
 autoapi_options = ['members', 'inherited-members', 'undoc-members',
                    'show-inheritance', 'show-inheritance-diagram', 'special-members']
 

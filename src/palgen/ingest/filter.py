@@ -92,6 +92,11 @@ class Pattern(Filter):
         """
         super().__init__(*patterns, regex=True, unix=unix)
 
+class Folder(Filter):
+    def filter(self, files: Iterable[Path]) -> Iterable[Path]:
+        for file in files:
+            if any(self.match_str(part) for part in file.parts):
+                yield file
 
 class Extension(Filter):
     def filter(self, files: Iterable[Path]) -> Iterable[Path]:

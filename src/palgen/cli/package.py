@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 @click.option("--extra-folders", default=[], type=ListParam[Path])
 @click.option("--dependencies", default=None, type=Path)
 @click.pass_context
-def main(ctx, debug: bool, version: bool, config: Path, extra_folders: str, dependencies: Optional[Path], jobs: int):
+def main(ctx, debug: bool, version: bool, config: Path, extra_folders: ListParam[Path], dependencies: Optional[Path], jobs: int):
     if version:
         from palgen import __version__
         print(f"palgen {__version__}")
@@ -37,12 +37,14 @@ def main(ctx, debug: bool, version: bool, config: Path, extra_folders: str, depe
 
     init_context(ctx, config)
 
+    assert isinstance(ctx.obj, Palgen)
+
     # override options
     if jobs is not None:
         ctx.obj.options.jobs = jobs
 
     if extra_folders:
-        ctx.obj.options.modules.extra_folders = extra_folders
+        ctx.obj.options.modules.folders.extend(extra_folders)
 
     if dependencies:
         ctx.obj.options.modules.dependencies = dependencies

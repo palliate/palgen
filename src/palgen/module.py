@@ -3,7 +3,6 @@ import traceback
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
-from jinja2 import Environment, FileSystemLoader
 from pydantic import BaseModel, ValidationError
 
 from palgen.ingest.filter import Extension, Name
@@ -34,7 +33,6 @@ class Module:
     pipeline: Pipeline | dict[str, Pipeline]
 
     # set by the loader
-    environment: Environment
     module: str
     path: Path
 
@@ -73,7 +71,6 @@ class Module:
         """Write the rendered files back to disk.
 
         Args:
-            out_path (Path): Root output path
             output (Iterable[tuple[Path, str]]): Generator producing file content
 
         Yields:
@@ -110,11 +107,8 @@ class Module:
                     self.name,
                     len(output),
                     's' if len(output) > 1 else '')
-        return output
 
-    def get_template(self, name: str, **kwargs):
-        # TODO out of class definition might be better
-        return self.environment.get_template(name, **kwargs)
+        return output
 
     @classmethod
     def to_string(cls) -> str:
@@ -134,7 +128,7 @@ Pipeline(s): {cls.pipeline}"""
         return self.to_string()
 
     def __init__(self, root_path: Path, out_path: Path, settings: Optional[dict[str, Any]] = None):
-        self.root_path = root_path
+        self.root = root_path
         self.out_path = out_path
 
         if settings is None:
@@ -174,8 +168,10 @@ Pipeline(s): {cls.pipeline}"""
                                                         >> cls.validate
                                                         >> cls.render
                                                         >> cls.write)
+                    logging.debug("Pipeline: \n%s", str(getattr(cls, "pipeline")))
                 case None:
                     setattr(cls, "pipeline", Pipeline() >> Nothing)
+                    logging.debug("Pipeline: \n%s", str(getattr(cls, "pipeline")))
                 case dict():
                     pipelines = {}
                     for key, value in ingest.items():
@@ -194,17 +190,5 @@ Pipeline(s): {cls.pipeline}"""
 
         check_schema_attribute(cls, "Settings")
         check_schema_attribute(cls, "Schema")
-
-        setattr(cls, "environment", Environment(
-            loader=FileSystemLoader(cls.path.parent),
-            block_start_string="@{",
-            block_end_string="}",
-            variable_start_string="@",
-            variable_end_string="@",
-            comment_start_string="@/*",
-            comment_end_string="*/",
-            keep_trailing_newline=True,
-        ))
-
 
 __all__ = ['Module', 'Sources']

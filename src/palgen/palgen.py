@@ -13,7 +13,7 @@ from palgen.schemas.root import RootSettings
 from palgen.schemas.project import ProjectSettings
 from palgen.schemas.palgen import PalgenSettings
 from palgen.loaders.manifest import Manifest
-from palgen.util.filesystem import gitignore, walk
+from palgen.util.filesystem import discover, gitignore
 
 
 logger = logging.getLogger(__name__)
@@ -45,8 +45,14 @@ class Palgen:
         self.project = ProjectSettings.parse_obj(self.settings['project'])
         self.options = PalgenSettings.parse_obj(self.settings['palgen'])
 
-        self.output = self._path_for(self.project.output) \
-            if self.project.output else self.root
+        if self.project.sources:
+            self.project.sources = self._expand_paths(self.project.sources)
+
+        if self.options.modules.folders:
+            self.options.modules.folders = self._expand_paths(self.options.modules.folders)
+
+        self.output = self._path_for(self.options.output) \
+            if self.options.output else self.root
 
     @cached_property
     def files(self) -> list[Path]:
@@ -58,25 +64,11 @@ class Palgen:
         Returns:
             list[Path]
         """
-        discovered = []
-        for folder in self.project.folders:
-            path: Path = self._path_for(folder)
-            if not path.exists():
-                logger.warning("Folder not found: %s. Skipping.", path)
-                continue
-
-            discovered.extend(list(walk(path, gitignore(self.root), jobs=self.options.jobs)))
-        return discovered
+        return discover(self.project.sources, gitignore(self.root), jobs=self.options.jobs)
 
     @cached_property
     def modules(self) -> Modules:
-        # if not self.options.modules.extra_folders:
-        #    # disable conan integration when extra dirs are provided
-
-        #    from palgen.integrations.conan.dependencies import get_paths
-        #    self.options.modules.extra_folders = get_paths(self.root)
-
-        return Modules(self.project, self.options.modules, self.files)
+        return Modules(self.project, self.options.modules, self.files, self.root)
 
     """@cached_property
     def subprojects(self) -> dict[str, Palgen]:
@@ -96,6 +88,9 @@ class Palgen:
     def _path_for(self, folder: str | Path) -> Path:
         path = Path(folder)
         return path if path.is_absolute() else self.root / path
+
+    def _expand_paths(self, folders: list[Path]) -> list[Path]:
+        return [self._path_for(folder) for folder in folders]
 
     def run(self, name: str, settings: dict):
         if name not in self.modules.runnables:

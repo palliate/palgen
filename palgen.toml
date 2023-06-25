@@ -1,4 +1,11 @@
+[palgen]
+output = "build"
+
+[palgen.modules]
+folders = ["docs"]
+inline = false
+
 [project]
 name = "palgen"
 version = "0.1"
-folders = ["build", "docs"]
+sources = ["test_result", "src"]

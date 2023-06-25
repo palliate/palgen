@@ -5,7 +5,7 @@ from typing import Iterable
 from palgen.ingest.filter import Extension, Stem, Pattern
 from palgen.ingest.loader import Json
 
-from palgen.module import Module, Sources, Model
+from palgen.module import Module, Sources, Model, jobs
 from palgen.integrations.jinja2.template import Template
 
 
@@ -36,9 +36,9 @@ class Tox(Module):
     def validate(self, data):
         yield from data
 
-    def render_tox(self, data):
-        out_path = self.root_path / 'docs' / 'test'
-        logging.warning('tox')
+    @jobs(1)
+    def render_tox(self, data: list):
+        out_path = self.root / 'docs' / 'test'
         environments = []
         for _, content in data:
             platform = content['platform']
@@ -73,22 +73,18 @@ class Tox(Module):
                     duration=node['result']['duration'],
 
                     packages=packages,
-                    maxpkglen=maxlen
-                )
+                    maxpkglen=maxlen)
 
             environments.append(f'{platform}-test')
-            yield out_path / f'{platform}-test.rst', Template('tox.rst.in')(
+            yield out_path / f'{platform}-test.rst', Template('tox.rst.in').render(
                 platform=platform.capitalize(),
                 toxversion=content['toxversion'],
-                tests=tests
-            )
-        yield out_path / 'index.rst', Template('index.rst.in')(environments=environments)
+                tests=tests)
+
+        yield out_path / 'index.rst', Template('index.rst.in').render(environments=environments)
 
     def render_test(self, data: Iterable[Path]):
-        out_path = self.root_path / 'docs' / 'test'
+        out_path = self.root / 'docs' / 'test'
 
-        logging.info('Generating test reports')
         for path in data:
-            yield out_path / f'{path.stem}.rst', Template('test_report.rst.in')(
-                target=path.stem
-            )
+            yield out_path / f'{path.stem}.rst', Template('test_report.rst.in').render(target=path.stem)

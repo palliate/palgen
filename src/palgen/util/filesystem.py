@@ -40,7 +40,7 @@ def gitignore(path: Path):
         return PathSpec([])
 
 
-def walk(path: Path, ignores: PathSpec, jobs: Optional[int] = None) -> Iterable[Path]:
+def walk(path: Path, ignores: PathSpec, jobs: Optional[int] = None) -> list[Path]:
     """traverse a directory tree and return a list of Path objects
     representing the files and folders found in the directory.
 
@@ -73,6 +73,19 @@ def walk(path: Path, ignores: PathSpec, jobs: Optional[int] = None) -> Iterable[
                 output.extend(new_output)
         return output
 
+def discover(paths: list[Path], ignores: PathSpec, jobs: Optional[int] = None) -> list[Path]:
+    return [element
+            for path in paths
+            for element in walk(path, ignores, jobs)]
+
+def find_backwards(filename: str, source_dir: Optional[Path] = None) -> Path:
+    current_dir: Path = source_dir or Path.cwd()
+    while current_dir:
+        if (file_path := current_dir / filename).exists():
+            return file_path
+        current_dir = current_dir.parent
+
+    raise FileNotFoundError(f"{filename} not found in parent directories.")
 
 def _walk_worker(args: tuple[Path, PathSpec]):
     path, ignores = args
@@ -80,7 +93,6 @@ def _walk_worker(args: tuple[Path, PathSpec]):
         raise NotADirectoryError
 
     if ignores.match_file(path):
-        logger.debug("Skipped %s", path)
         return [], []
 
     if (probe := path / '.gitignore').exists():
@@ -97,7 +109,6 @@ def _walk_worker(args: tuple[Path, PathSpec]):
     for entry in path.iterdir():
         if ignores.match_file(entry):
             # honor .gitignore, skip this entry
-            logger.debug("Skipped `%s`", entry)
             continue
 
         entries.append(entry)
@@ -105,12 +116,3 @@ def _walk_worker(args: tuple[Path, PathSpec]):
         if entry.is_dir():
             folders.append((entry, ignores))
     return folders, entries
-
-def find_backwards(filename: str, source_dir: Optional[Path] = None) -> Path:
-    current_dir: Path = source_dir or Path.cwd()
-    while current_dir:
-        if (file_path := current_dir / filename).exists():
-            return file_path
-        current_dir = current_dir.parent
-
-    raise FileNotFoundError(f"{filename} not found in parent directories.")

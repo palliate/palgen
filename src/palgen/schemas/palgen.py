@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+from typing import Annotated, Optional
 from pydantic import BaseModel
 from pathlib import Path
 
@@ -8,7 +8,7 @@ class ModuleSettings(BaseModel):
     # inherit modules from other projects
     inherit: bool = True
     # extra paths to check for modules
-    extra_folders: list[Path] = []
+    folders: list[Path] = []
     dependencies: Optional[Path] = None
 
     # Loaders
@@ -16,9 +16,9 @@ class ModuleSettings(BaseModel):
     python: bool = True
     manifest: bool = True
 
+    inline: bool = True
 
 class PalgenSettings(BaseModel):
-    output: Optional[str] = None
-    folders: list[str] = []
     modules: ModuleSettings = ModuleSettings()
-    jobs: Optional[int] = os.cpu_count() or 1
+    jobs:    Optional[int] = os.cpu_count() or 1
+    output:  Annotated[Optional[Path], "Output folder"] = None

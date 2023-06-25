@@ -6,10 +6,10 @@ Generated
 
 Classes
 
-.. image:: classes.svg
+.. image:: /build/diagrams/classes.svg
    :target: ../../_images/classes.svg
 
 Package collaboration
 
-.. image:: packages.svg
+.. image:: /build/diagrams/packages.svg
    :target: ../../_images/packages.svg
