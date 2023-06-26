@@ -4,10 +4,10 @@ from pathlib import Path
 
 import click
 
-from palgen.schemas.project import ProjectSettings
+from palgen.schemas import ProjectSettings
 
 
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 
 @click.command()
@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 @click.option("--project", help="Generate project info script", is_flag=True)
 @click.pass_context
 def cmake(ctx, outpath, toolchain, project):
+    """Generates CMake helper scripts. This is a builtin command of the CMake integration."""
     if toolchain:
         path = Path(__file__).parent / "palgen.cmake"
         out = Path(outpath) / "palgen.cmake"
@@ -39,4 +40,4 @@ SET(TARGET_VERSION "{settings.version}")"""
 
         with open(out, "w", encoding="utf-8") as file:
             file.write(text)
-        logger.info("Generated project helper script %s", out)
+        _logger.info("Generated project helper script %s", out)

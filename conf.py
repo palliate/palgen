@@ -35,7 +35,8 @@ extensions = [
     'sphinxcontrib.plantuml',
     'sphinx_immaterial.graphviz',
 
-    'sphinx_mdinclude'
+    'sphinx_mdinclude',
+    'sphinx_click'
 ]
 
 templates_path = ['docs/_templates']

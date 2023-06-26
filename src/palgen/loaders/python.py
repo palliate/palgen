@@ -1,40 +1,104 @@
-import sys
+import functools
 import logging
+import sys
 import uuid
-from importlib.util import spec_from_file_location, module_from_spec
+from importlib.util import module_from_spec, spec_from_file_location
+from pathlib import Path
 from typing import Iterable, Optional
 
-from pathlib import Path
-from palgen.loaders import Loader
-from palgen.module import Module
-from palgen.schemas.project import ProjectSettings
-
 from palgen.ingest.filter import Extension
-from palgen.util.ast_helper import AST
+from palgen.schemas import ProjectSettings
 
-logger = logging.getLogger(__name__)
+from .ast_helper import AST
+from .loader import Loader, LoaderGenerator, Module
+
+_logger = logging.getLogger(__name__)
 
 
 class Python(Loader):
+    def __init__(self, project: Optional[ProjectSettings] = None):
+        """Loads palgen modules from Python modules (that is, files).
 
-    @staticmethod
-    def ingest(sources: Iterable[Path], project: Optional[ProjectSettings] = None):
+        Args:
+            project (Optional[ProjectSettings], optional): Project settings used to give modules a proper import name. Defaults to None.
+        """
+        self.project = project
+
+    def ingest(self, sources: Iterable[Path]) -> LoaderGenerator:
+        """Ingests modules from the given sources. This skips all files not ending in '.py'.
+
+        Args:
+            sources (Iterable[Path]): An iterable of paths to input files
+
+        Yields:
+            tuple[str, Type[Module]]: name and class of all discovered palgen modules
+        """
         files = Extension('.py')(sources)
         for file in files:
-            yield from Python.load(file, project=project)
+            yield from self.load(file)
 
-    @staticmethod
-    def parse_init(path: Path, module_name: list[str]):
-        #TODO cache this
-        ast = AST.load(path)
-        module_name.append(ast.constants.get('_NAME', path.parent.name))
-        if not ast.constants.get('_PUBLIC', False):
-            module_name.append(str(uuid.uuid4()))
-        return module_name
+    def load(self, path: Path, import_name: Optional[str] = None) -> LoaderGenerator:
+        """Attempt loading palgen modules from Python module at the given path.
+
+        Args:
+            path (Path): Path to the Python module
+            import_name (Optional[str], optional): Qualified name to use for the Python module. Defaults to None.
+
+        Yields:
+            tuple[str, Type[Module]]: name and class of all discovered palgen modules
+        """
+        if not Python.check_candidate(path):
+            return
+
+        name = import_name or self.get_module_name(path)
+        _logger.debug("Adding to sys.modules: %s", name)
+
+        spec = spec_from_file_location(name, path)
+
+        # file is pre-checked, this assertion should never fail
+        assert spec and spec.loader, "Spec could not be loaded"
+
+        try:
+            module = module_from_spec(spec)
+            sys.modules[name] = module
+            spec.loader.exec_module(module)
+
+        except ImportError as exc:
+            import traceback
+            _logger.warning("Failed loading %s. Error: %s", path, exc)
+
+            if _logger.isEnabledFor(logging.DEBUG):
+                traceback.print_exception(exc)
+
+        else:
+            for attr_name in dir(module):
+                if attr_name.startswith('_'):
+                    # ignore "private" modules
+                    continue
+
+                attr = getattr(module, attr_name)
+                if not isinstance(attr, type) or not issubclass(attr, Module) or attr is Module:
+                    continue
+
+                attr.module = name
+                _logger.debug("Found module `%s` (importable from `%s`). Key `%s`",
+                            attr.__name__, name, attr.name)
+
+                yield attr.name, attr
 
     @staticmethod
     def check_candidate(path: Path) -> bool:
-        if path.name.startswith('_'):
+        """Analyzes the AST of the Python module at the given path without executing it.
+        If the AST does not contain any valid subclasses of palgen.module.Module the
+        Python module will not be deemed a valid candidate for further processing.
+
+        Args:
+            path (Path): Path to the file to check
+
+        Returns:
+            bool: True if the path points to a valid candidate, False otherwise.
+        """
+        if path.name.startswith('_') or path.suffix != '.py':
             return False
 
         try:
@@ -43,67 +107,56 @@ class Python(Loader):
                 return False
 
         except UnicodeDecodeError:
-            logger.warning("Could not decode file %s", path)
+            _logger.warning("Could not decode file %s", path)
             return False
 
         return True
 
     @staticmethod
-    def load(path: Path, project: Optional[ProjectSettings] = None, import_name: Optional[str] = None):
-        if project is not None and import_name is not None:
-            raise RuntimeError("expected project or import_name, not both.")
+    @functools.lru_cache(maxsize=64)
+    def get_parent_name(path: Path) -> str:
+        """Gets the name of the parent module (in terms of Python's import machinery).
+        The __init__.py will be analyzed without executing the Python module. If it includes
+        a constant named :code:`_PUBLIC` and :code:`_PUBLIC = True` it will randomize the parent module name.
+        Otherwise it will use the content of the string constant :code:`_NAME` or fall back to the
+        folder's name.
 
-        if not Python.check_candidate(path):
-            return
+        Warning:
 
+        Args:
+            path (Path): Path to the __init__.py
+
+        Returns:
+            str: Parent module name
+        """
+        ast = AST.load(path)
+        if not ast.constants.get('_PUBLIC', False):
+            return str(uuid.uuid4())
+
+        return ast.constants.get('_NAME', path.parent.name)
+
+    def get_module_name(self, path: Path) -> str:
+        """Gets the qualified name for the Python module found at path.
+        Falls back to a random project name (and therefore a private module)
+        if this loader hasn't been assigned a project yet.
+
+        Args:
+            path (Path): Path to a Python file.
+
+        Returns:
+            str: qualified name of the module
+        """
         module_name: list[str] = ["palgen", "ext"]
-        if project is not None:
-            module_name.append(project.name)
+
+        if self.project is not None:
+            module_name.append(self.project.name)
 
             if (probe := path.parent / '__init__.py').exists():
-                module_name = Python.parse_init(probe, module_name)
+                module_name.append(Python.get_parent_name(probe))
 
             module_name.append(path.stem)
-
-        elif import_name is not None:
-            module_name.extend(import_name.split('.'))
-
         else:
             # no way to avoid conflicts, make this private
             module_name.append(str(uuid.uuid4()))
 
-
-        name = '.'.join(module_name)
-        logger.debug("Adding to sys.modules: %s", name)
-        spec = spec_from_file_location(name, path)
-
-        # file is pre-checked, these assertions should never fail
-        assert spec, "Spec could not be loaded"
-        assert spec.loader, "Spec has no loader"
-        try:
-            module = module_from_spec(spec)
-            sys.modules[name] = module
-            spec.loader.exec_module(module)
-        except ImportError as exc:
-            import traceback
-            logging.warning("Failed loading %s. Error: %s", path, exc)
-
-            if logger.isEnabledFor(logging.DEBUG):
-                traceback.print_exception(exc)
-
-        else:
-            attrs = [getattr(module, attr_name)
-                    for attr_name in dir(module)
-                    if not attr_name.startswith('_')]
-
-            for attr in attrs:
-                if not isinstance(attr, type):
-                    continue
-                if not issubclass(attr, Module) or attr is Module:
-                    continue
-
-                attr.module = '.'.join(module_name[2:])
-                logger.info("Found module `%s` (importable from `%s`). Key `%s`",
-                            attr.__name__, name, attr.name)
-
-                yield attr.name, attr
+        return '.'.join(module_name)

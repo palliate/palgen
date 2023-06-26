@@ -4,7 +4,7 @@ from unittest.mock import mock_open, patch
 
 import pytest
 
-from palgen.util.ast_helper import AST, get_import_name
+from palgen.loaders.ast_helper import AST, get_import_name
 
 MOCK_PATH = '/tmp/path.py'
 

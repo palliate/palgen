@@ -21,7 +21,9 @@ class TestResult(Model):
     maxpkglen: int
 
 class Tox(Module):
-    ''' Sources module help text. Spliced after the dot '''
+    """ Generate pretty test reports from tox and pytest output.
+    This is internal to palgen, you can find its implementation in docs/modules
+    """
 
     ingest: dict[str, Sources] = {
         'tox': Sources >> Extension('.json')

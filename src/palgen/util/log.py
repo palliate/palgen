@@ -49,7 +49,7 @@ class LogFormatter(logging.Formatter):
 
 
 def setup_logger() -> None:
-    """Enables this custom logger globally."""
+    """Enables this custom _logger globally."""
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(logging.DEBUG)
     handler.setFormatter(LogFormatter())

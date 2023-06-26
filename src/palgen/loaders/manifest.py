@@ -1,18 +1,13 @@
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional
 
 import toml
 from pydantic import BaseModel
 
-from palgen.loaders import Loader
-from palgen.loaders.python import Python
+from .loader import Loader, LoaderGenerator
+from .python import Python
 
-if TYPE_CHECKING:
-    from palgen.modules import Modules
-
-
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 
 class ManifestSchema(BaseModel):
@@ -23,45 +18,52 @@ class ManifestSchema(BaseModel):
 
 
 class Manifest(Loader):
+    __slots__ = ['python_loader']
+    def __init__(self) -> None:
+        """Loads palgen modules from manifest files (palgen.manifest).
+        """
 
-    @staticmethod
-    def ingest(sources: list[Path]):
-        if isinstance(sources, list):
-            for source in sources:
-                assert isinstance(source, Path)
+        self.python_loader = Python()
 
-                if not source.is_dir():
-                    continue
+    def ingest(self, sources: list[Path]) -> LoaderGenerator:
+        """Searches the given sources for palgen manifests and loads them.
 
-                for path in source.glob('**/palgen.manifest'):
-                    yield from Manifest.load(Path(path))
+        Args:
+            sources (Iterable[Path]): An iterable of paths to input files
 
-    @staticmethod
-    def load(path: Path):
+        Yields:
+            tuple[str, Type[Module]]: name and class of all discovered palgen modules
+        """
+
+        for source in sources:
+            assert isinstance(source, Path)
+
+            if not source.is_dir():
+                continue
+
+            for path in source.glob('**/palgen.manifest'):
+                yield from self.load(Path(path))
+
+    def load(self, path: Path) -> LoaderGenerator:
+        """Attempt loading palgen modules from manifest at the given path.
+
+        Args:
+            path (Path): Path to the manifest
+
+        Yields:
+            tuple[str, Type[Module]]: name and class of all discovered palgen modules
+        """
         if not path.exists():
-            logger.warning("Could not find %s", path)
+            _logger.warning("Could not find %s", path)
             return
 
         file = toml.load(path)
         manifest = ManifestSchema.parse_obj(file)
-        logger.debug("Loading from `%s`", path)
+        _logger.debug("Loading from `%s`", path)
 
         for name, path_str in manifest.items():
             path = Path(path_str)
             if not path.is_absolute():
                 path = path.parent / path
 
-            yield from Python.load(path, import_name=name)
-
-    @staticmethod
-    def generate(modules: 'Modules', basepath: Optional[Path] = None):
-        modules_out: dict[str, str] = {}
-
-        for module in modules.exportables.values():
-            path = module.path
-            if basepath and module.path.is_relative_to(basepath):
-                path = module.path.relative_to(basepath)
-
-            modules_out[module.module] = str(path)
-
-        return toml.dumps(modules_out)
+            yield from self.python_loader.load(path, import_name=name)

@@ -4,7 +4,7 @@ from pathlib import Path
 import toml
 from conans.model.dependencies import ConanFileDependencies
 
-from palgen.loaders.manifest import ManifestSchema
+from palgen.loaders import ManifestSchema
 
 
 def dependency_manifest(dependencies: ConanFileDependencies, output: Path | str):

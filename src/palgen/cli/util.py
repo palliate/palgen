@@ -1,6 +1,6 @@
 from abc import ABC
 from types import UnionType
-from typing import Annotated, Optional, Union, get_args, get_origin, get_type_hints
+from typing import Annotated, Union, get_args, get_origin, get_type_hints
 
 import click
 

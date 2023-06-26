@@ -3,9 +3,9 @@ import logging
 from functools import singledispatchmethod
 from pathlib import Path
 from types import ModuleType
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable, Optional, Self
 
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 
 class AST:
@@ -84,7 +84,7 @@ class AST:
     def visit_module(self, node: ast.Module):
         """ Module
 
-        .. code-block:: ASDL
+        .. code-block::
 
            Module(stmt* body, type_ignore* type_ignores)
         """
@@ -96,7 +96,7 @@ class AST:
     def visit_assign(self, node: ast.Assign):
         """ Assignment, ie :code:`foo = 3`
 
-        .. code-block:: ASDL
+        .. code-block::
 
            Assign(expr* targets, expr value, string? type_comment)
         """
@@ -116,7 +116,7 @@ class AST:
     def visit_assign_annotated(self, node: ast.AnnAssign):
         """ Assignment with type annotations, ie :code:`foo: int = 3`
 
-        .. code-block:: ASDL
+        .. code-block::
 
            AnnAssign(expr target,
                      expr annotation,
@@ -135,7 +135,7 @@ class AST:
     def visit_import(self, node: ast.Import):
         """ Simple imports, ie :code:`import foo`
 
-        .. code-block:: ASDL
+        .. code-block::
 
            Import(alias* names)
         """
@@ -147,7 +147,7 @@ class AST:
     def visit_import_from(self, node: ast.ImportFrom):
         """ Import from module, ie `from foo import bar`
 
-        .. code-block:: ASDL
+        .. code-block::
 
            ImportFrom(identifier? module,
                       alias* names,
@@ -163,7 +163,7 @@ class AST:
     def visit_class(self, node: ast.ClassDef):
         """ Class definition
 
-        .. code-block:: ASDL
+        .. code-block::
 
            ClassDef(identifier name,
                     expr* bases,
@@ -307,10 +307,10 @@ class Class:
         pass
 
     @visit.register
-    def visit_class(self, node: ast.ClassDef) -> 'Class':
+    def visit_class(self, node: ast.ClassDef):
         """Visits class definition and extracts bases.
 
-        .. code-block:: ASDL
+        .. code-block::
 
            ClassDef(identifier name,
                     expr* bases,
@@ -336,7 +336,7 @@ class Class:
     def visit_attribute(self, node: ast.Attribute) -> str:
         """Visits an attribute
 
-        .. code-block:: ASDL
+        .. code-block::
 
             Attribute(expr value,
                       identifier attr,
@@ -351,7 +351,7 @@ class Class:
     def visit_name(self, node: ast.Name) -> str:
         """Visits a variable name
 
-        .. code-block:: ASDL
+        .. code-block::
 
            Name(identifier id, expr_context ctx)
 

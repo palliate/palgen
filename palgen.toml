@@ -8,4 +8,8 @@ inline = false
 [project]
 name = "palgen"
 version = "0.1"
-sources = ["build/tesst", "src"]
+sources = ["build/test", "src"]
+
+[tox]
+[diagrams]
+[docs]

@@ -9,7 +9,7 @@ from multiprocessing.pool import Pool
 
 from palgen.util.typing import issubtype
 
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 
 _Step = Callable[[Iterable], Iterable] | Generator[Any, Any, Any] | \
@@ -115,7 +115,7 @@ class Pipeline(metaclass=PipelineMeta):
 
             # synchronize after every task
             with Pool(processes=jobs) as pool:
-                logger.debug("Running with %d jobs", jobs)
+                _logger.debug("Running with %d jobs", jobs)
                 chunks = [output[i::jobs] for i in range(jobs)]  # partition
                 output = []  # reset buffer
                 for chunk in pool.imap(partial(self._run_task, obj=obj, task=task), chunks):

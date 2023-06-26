@@ -1,14 +1,4 @@
-from pathlib import Path
-from abc import abstractmethod
+from .manifest import Manifest, ManifestSchema
+from .python import Python
 
-
-class Loader:
-    @staticmethod
-    @abstractmethod
-    def ingest(sources: list[Path]):
-        pass
-
-    @staticmethod
-    @abstractmethod
-    def load(path: Path):
-        pass
+__all__ = ['Manifest', 'ManifestSchema', 'Python']

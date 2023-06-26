@@ -7,11 +7,10 @@ from pydantic import BaseModel, ValidationError
 
 from palgen.ingest.filter import Extension, Name
 from palgen.ingest.loader import Nothing, Toml
-from palgen.util import Pipeline, setattr_default
-from palgen.util.filesystem import Sources
+from palgen.util import Sources, Pipeline, setattr_default
 from palgen.util.schema import Model, check_schema_attribute, print_validationerror
 
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 
 def jobs(max_jobs: int):
@@ -65,7 +64,7 @@ class Module:
             try:
                 yield path, self.Schema.parse_obj(value)
             except ValidationError as ex:
-                logger.warning("%s failed verification.", path)
+                _logger.warning("%s failed verification.", path)
                 print_validationerror(ex)
 
     def render(self, data: Iterable[tuple[Path, BaseModel | Any]]) -> Iterable[tuple[Path, str]]:
@@ -102,7 +101,7 @@ class Module:
             with open(filename, "w+", encoding="utf8") as file:
                 file.write(generated)
 
-            logger.debug("Generated `%s`", filename)
+            _logger.debug("Generated `%s`", filename)
             yield filename
 
     def run(self, files: list[Path], jobs: Optional[int] = None) -> list[Path]:
@@ -124,12 +123,12 @@ class Module:
 
         if isinstance(self.pipeline, dict):
             for key, pipeline in self.pipeline.items():
-                logger.debug("Running pipeline `%s`", key)
+                _logger.debug("Running pipeline `%s`", key)
                 output.extend(pipeline(files, obj=self, max_jobs=jobs))
         else:
             output = self.pipeline(files, obj=self, max_jobs=jobs)
 
-        logger.info("Module `%s` yielded %s file%s",
+        _logger.info("Module `%s` yielded %s file%s",
                     self.name,
                     len(output),
                     's' if len(output) > 1 else '')
@@ -172,10 +171,10 @@ Pipeline(s): {cls.pipeline}"""
 
         try:
             self.settings = self.Settings(**settings)
-            logger.debug("Validated settings for %s", self.name)
+            _logger.debug("Validated settings for %s", self.name)
 
         except ValidationError as ex:
-            logger.warning("Failed verifying config for `%s`", self.name)
+            _logger.warning("Failed verifying config for `%s`", self.name)
             print_validationerror(ex)
             # TODO rethrow ValidationError instead, make sure we terminate with retcode 1 somewhere else
             raise SystemExit(1) from ex

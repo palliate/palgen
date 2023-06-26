@@ -3,7 +3,7 @@ import logging
 from pydantic import BaseModel, ValidationError
 
 
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 
 def check_schema_attribute(cls: type, name: str):
@@ -17,8 +17,8 @@ def check_schema_attribute(cls: type, name: str):
 def print_validationerror(exception: ValidationError):
     for error in exception.errors():
         for loc in error["loc"]:
-            logger.warning("  %s", loc)
-        logger.warning("    %s (type=%s)", error["msg"], error["type"])
+            _logger.warning("  %s", loc)
+        _logger.warning("    %s (type=%s)", error["msg"], error["type"])
 
 
 Model = BaseModel

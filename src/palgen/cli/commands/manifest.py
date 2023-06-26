@@ -2,10 +2,9 @@ import logging
 from pathlib import Path
 
 import click
-
 from palgen.palgen import Palgen
 
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 
 @click.command()
@@ -13,16 +12,18 @@ logger = logging.getLogger(__name__)
 @click.option("-r", "--relative", help="Output relative paths instead of absolute ones.", is_flag=True)
 @click.pass_context
 def manifest(ctx, output: Path, relative: bool):
+    """Generate palgen.manifest for the current project. This is a builtin command.
+    """
+
     assert isinstance(ctx.obj, Palgen)
 
     if output.is_dir():
         output /= 'palgen.manifest'
     output.parent.mkdir(exist_ok=True)
 
-    # TODO generate sane relative paths. I don't like the current way but it's fine for now
-    generated = ctx.obj.generate_manifest(output.parent.absolute()
-                                          if relative else None)
+    generated = ctx.obj.modules.manifest(output.parent.absolute()
+                                         if relative else None)
 
     with open(output, 'w', encoding="utf-8") as file:
         file.write(generated)
-    logger.info("Written manifest file %s", output)
+    _logger.info("Written manifest file %s", output)

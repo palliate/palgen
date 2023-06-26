@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 
 class Ingest:
@@ -29,7 +29,7 @@ class Empty(Ingest):
             if file.stat().st_size == 0:
                 yield file, None
             else:
-                logger.warning("%s matches ingest configuration but is not empty.",
+                _logger.warning("%s matches ingest configuration but is not empty.",
                                file)
 
 

@@ -1,15 +1,16 @@
+import contextlib
 import logging
 from multiprocessing import Process
 import os
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Iterable
 from pylint.pyreverse.main import Run
 import pydot
 
 from palgen.ingest.filter import Extension, Folder
 from palgen.ingest.path import Relative, Absolute
 from palgen.module import Module, Sources, jobs
-from palgen.util.ast_helper import AST
+from palgen.loaders.ast_helper import AST
 
 def run_pyreverse(cwd: Path, args):
     cwd.mkdir(exist_ok=True, parents=True)
@@ -17,14 +18,14 @@ def run_pyreverse(cwd: Path, args):
     Run(args)
 
 class Diagrams(Module):
-    ''' Sources module help text. Spliced after the dot '''
+    """ Generate pretty diagrams using pyreverse.
+    This is internal to palgen, you can find its implementation in docs/modules
+    """
 
     def get_ast(self, data):
         for file in data:
-            try:
+            with contextlib.suppress(Exception):
                 yield AST.load(file)
-            except:
-                pass
 
     ingest = Sources >> Relative >> Folder('src') >> Extension('.py') >> Absolute >> get_ast
 
@@ -88,7 +89,7 @@ class Diagrams(Module):
                     # remove extra data, only print name
                     if 'label' in attributes:
                         del attributes['label']
-                
+
                 # fix text overlapping the box
                 attributes['margin'] = '"0.2,0.1"'
 

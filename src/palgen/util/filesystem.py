@@ -8,7 +8,7 @@ from pathspec.patterns.gitwildmatch import GitWildMatchPattern
 
 from palgen.util import Pipeline
 
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 
 class Sources(Pipeline):
@@ -36,7 +36,7 @@ def gitignore(path: Path):
             return PathSpec.from_lines(GitWildMatchPattern,
                                        file.read().splitlines())
     except FileNotFoundError:
-        logger.exception("Error occurred while opening gitignore")
+        _logger.exception("Error occurred while opening gitignore")
         return PathSpec([])
 
 
@@ -101,7 +101,7 @@ def _walk_worker(args: tuple[Path, PathSpec]):
 
     '''if (probe := path / 'palgen.toml').exists():
             # skip subtrees of other projects but yield the project file
-            logger.debug("Found another palgen project in `%s`. Skipping.")
+            _logger.debug("Found another palgen project in `%s`. Skipping.")
             return [], [probe]'''
 
     folders = []

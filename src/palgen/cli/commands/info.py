@@ -8,7 +8,7 @@ from palgen.util.log import set_min_level
 @click.argument('module', required=False)
 @click.pass_obj
 def info(obj: Palgen, full, module):
-    """Print project or module info and exit."""
+    """Print project or module info and exit. This is a builtin command."""
     set_min_level(3)
     assert isinstance(obj, Palgen)
 

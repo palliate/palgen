@@ -23,7 +23,7 @@ class Project(Module):
             outpath = self.out_path / meta.parent
             logging.debug("Outpath: %s", outpath)
 
-            yield outpath / "info.h", Template("info.h.in").render(
+            yield outpath / "info.h", Template("info.h.in")(
                 project=self.settings.name,
                 version=self.settings.version,
                 description=self.settings.description

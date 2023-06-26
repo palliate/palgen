@@ -14,7 +14,7 @@ from palgen.module import Module
 from palgen.palgen import Palgen
 from palgen.cli.util import pydantic_to_click
 
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 
 def init_context(ctx, config: str | Path = Path.cwd()):

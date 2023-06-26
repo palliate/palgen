@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional, Pattern, Iterable
 from palgen.util import Pipeline
 
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 
 class PathFilter:
@@ -33,7 +33,7 @@ def gitignore(path: Path) -> set[Pattern]:
         path = path / '.gitignore'
 
     if path.exists():
-        logger.debug("Parsing `%s`", path)
+        _logger.debug("Parsing `%s`", path)
         with open(path, mode='r', encoding='utf-8') as file:
             return {re.compile(fnmatch.translate(line))
                     for line in file.read().splitlines()
@@ -50,21 +50,21 @@ def walk(path: Path | str, ignores: PathFilter | set[Pattern]) -> Iterable[Path]
         raise NotADirectoryError
 
     if ignores.check(path):
-        logger.debug("Skipped %s", path)
+        _logger.debug("Skipped %s", path)
         return
 
     ignores = ignores.copy_extend(gitignore(path))
 
     if (probe := path / 'palgen.toml').exists():
         # skip subtrees of other projects but yield the project file
-        logger.debug("Found another palgen project in `%s`. Skipping.")
+        _logger.debug("Found another palgen project in `%s`. Skipping.")
         yield probe
         return
 
     for entry in path.iterdir():
         if ignores.check(entry):
             # honor .gitignore, skip this entry
-            logger.debug("Skipped `%s`", entry)
+            _logger.debug("Skipped `%s`", entry)
             continue
 
         yield entry
