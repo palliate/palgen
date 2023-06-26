@@ -247,7 +247,7 @@ class AST:
 
                 yield '.'.join([import_.name, *remainder] if import_.name else remainder)
 
-    def get_subclasses(self, base: type) -> Iterable[Class]:
+    def get_subclasses(self, base: type) -> Iterable['Class']:
         """Gets all subclasses of given base type.
 
         Args:

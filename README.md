@@ -30,7 +30,7 @@ The detailed documentation for palgen can be found at [palgen.palliate.io](https
 
 ## Examples
 
-Check out the [examples](https://github.com/palliate/palgen/tree/master/examples) subfolder in the repository for various usage examples of Palgen.
+Check out the [examples](https://github.com/palliate/palgen/tree/master/examples) subfolder in the repository for various usage examples for palgen.
 
 Palgen itself uses palgen to generate parts of its documentation. You can check out those more complex modules in the [docs/modules](https://github.com/palliate/palgen/tree/master/docs/modules) subfolder. Since this project is part of the [palliate](https://palliate.io) project you may find additional usage examples in the other repositories within the [palliate organization](https://github.com/palliate).
 
@@ -46,5 +46,5 @@ Join the palliate Discord server to connect with the community and get support f
 
 ## License
 
-Palgen is licensed under the MIT License. See the [LICENSE](https://github.com/palliate/palgen/blob/main/LICENSE) file for more details.
+Palgen is licensed under the MIT License. See the [LICENSE](https://github.com/palliate/palgen/blob/master/LICENSE) file for more details.
 
