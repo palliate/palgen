@@ -4,3 +4,5 @@ sphinx-needs
 #sphinxcontrib-plantuml
 sphinxcontrib-jquery
 sphinx-test-reports
+sphinx_mdinclude
+sphinx-immaterial

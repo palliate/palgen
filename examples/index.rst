@@ -6,4 +6,3 @@ Examples
 
    cmake/index
    conan/index
-   preprocessor/index

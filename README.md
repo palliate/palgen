@@ -1,128 +1,50 @@
-# codegen
-Code generation utility
+# Palgen
 
-## Project structure
+[![PyPI](https://img.shields.io/pypi/v/palgen.svg)](https://pypi.org/project/palgen/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/your_username/palgen/blob/main/LICENSE)
+[![Documentation](https://img.shields.io/badge/Documentation-palgen.palliate.io-brightgreen)](https://palgen.palliate.io)
 
-- no builtin templates, all generation is user-defined
-- optional toml-schema for `# coding: toml-schema` support
-- optional pydantic schemas
+Palgen is a powerful and modular command line tool aiming to simplify writing various common utilities such as build scripts, code generators and preprocessors. Palgen provides an easy-to-use interface for creating command line applications by automatically generating command line interfaces (CLIs) from pydantic schemas. This allows for file-based configurations and setting validation.
 
-## Minimum required project settings
+## Features
 
-Every project must include a file called `palgen.toml` at its project root.
+- Modular architecture. Once your user provided class inherits from palgen's `Module` interface it will be recoginized as module and become runnable.
+- Automatic generation of command line interfaces.
+- Configuration settings validation using pydantic.
+- Easy integration with existing Python projects.
+- Easy-to-use ingest pipelines for processing data.
+- Automatic parallelization of Module pipelines unless disabled.
+- Comprehensive documentation available at [palgen.palliate.io](https://palgen.palliate.io).
 
-Builtin settings:
-```toml
-[project]
-  name = "ProjectName"
-  version = "v0.1"
-  folders = ["src"]
+## Installation
 
-[templates] # optional
-  folders = ["templates"] # optional
+Palgen can be installed via pip:
+
+```shell
+pip install palgen
 ```
 
-## Template definition
-TODO decide whether templates should be defined in-source or in another directory
-### Python
-Create a parser, you can name it whatever you want but the file extension must be `.py`. You must define exactly one parser class which inherits from `palgen.parser.Parser`, its name does not matter.
+## Documentation
 
-TODO decide whether class name, file name or parent folder name should indicate what data we care about
+The detailed documentation for palgen can be found at [palgen.palliate.io](https://palgen.palliate.io). It includes guides, examples, and API reference documentation to help you get started and make the most out of palgen.
 
-Let's define a template called `test`. First define a parser, let's put that in `parser.py`
-```py
-from palgen.parser import Parser
+## Examples
 
-class Test(Parser):
-  class Settings(BaseModel):
-    ''' Template settings. Must be provided from `palgen.toml` '''
-    name: str
+Check out the [examples](https://github.com/palliate/palgen/tree/master/examples) subfolder in the repository for various usage examples of Palgen.
 
-  class Config(BaseModel):
-    ''' Template input. Can be provided from multiple `config.toml` '''
+Palgen itself uses palgen to generate parts of its documentation. You can check out those more complex modules in the [docs/modules](https://github.com/palliate/palgen/tree/master/docs/modules) subfolder. Since this project is part of the [palliate](https://palliate.io) project you may find additional usage examples in the other repositories within the [palliate organization](https://github.com/palliate).
 
-    class Types(str, Enum):
-      APPLICATION = "application"
-      LIBRARY = "library"
-      PLUGIN = "plugin"
+## Contributing
 
-    type: Types
-    description: Optional[str] = ""
+Contributions to palgen are very welcome! If you find any issues or have suggestions for improvements, please open an issue on the [GitHub repository](https://github.com/palliate/palgen). You can also submit pull requests with bug fixes or new features.
 
-  def prepare(self):
-    ''' Transform input to data ready to be rendered '''
-    pass
+Before making a contribution, please ensure that you have read and understood the [Contributing Guidelines](https://github.com/palliate/palgen/blob/main/CONTRIBUTING.md).
 
-  def render(self):
-    ''' Render the template '''
-    pass
-```
-note that you can load schemas from `.toml` files as well:
-```py
-from palgen.parser import Parser
+## Community and Support
 
-class Test(Parser):
-  Schemas = "schema.toml"
+Join the palliate Discord server to connect with the community and get support for palgen and other palliate projects. [Join here](https://discord.palliate.io).
 
-  ...
-```
+## License
 
-TODO inline toml?
+Palgen is licensed under the MIT License. See the [LICENSE](https://github.com/palliate/palgen/blob/main/LICENSE) file for more details.
 
-now define a template to render data into, let's call that `test.h.in`
-```cpp
-#pragma once
-#include <string_view>
-
-namespace Tests {
-struct Test {
-  std::string_view name;
-  std::string_view type;
-  std::string_view description;
-};
-
-static const Test @name; = {
-  .name = "@name;",
-  .type = "@type;",
-@{- if description }
-  .description = "@description;",
-@{- endif }
-};
-}
-```
-
-### TOML
-If you do not need to do transformations on input data or custom rendering you can simply define schemas and a template definition.
-
-Let's reuse the template definition `test.h.in` from the previous example. First define some schemas.
-
-Let's put this in `schema.toml`
-```toml
-[Settings]
-  # ...
-[Config]
-  # ...
-[Test]
-  template = "test.h.in"
-  output = "test.h" # optional
-```
-
-## Template rendering workflow
-Preparation
-- Load and parse `palgen.toml`
-- Load templates, construct all enabled ones with settings from `palgen.toml`
-- Find all `config.toml` files in the configured source folder
-- Collect data
-
-Rendering - this will be done for all enabled templates
-- call `prepare()` of template
-- call `render()` of template
-- call `write()` of template
-- call `finish()` of template
-
-## Glossary
-| Term    | Meaning |
-|---------|---------|
-| template | User-defined transformations to usable data
-| setting | Template settings, defined in one `palgen.toml` per project |
-| config  | Template inputs, defined in possibly multiple `config.toml` within the project's source tree |

@@ -1,17 +1,17 @@
-Palgen
-==================================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+.. mdinclude:: README.md
 
 Changelog
 ==================
 
 .. git_changelog::
 
+
 Modules
 ==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
 
 .. toctree::
    :maxdepth: 0
@@ -22,4 +22,4 @@ Modules
    reference/index
    docs/diagrams/index
    docs/test/index
-   docs/glossary
+   CONTRIBUTING.md

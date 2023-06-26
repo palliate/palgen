@@ -8,112 +8,29 @@ from typing import Any, Iterable, Optional
 logger = logging.getLogger(__name__)
 
 
-class Import:
-    def __init__(self, name: Optional[str] = None,
-                 module: Optional[list[str]] = None,
-                 alias: Optional[str] = None):
-        self._name = name
-        self.module = module or []
-        self.alias = alias
-
-    @property
-    def name(self):
-        return self.alias or self._name
-
-    @property
-    def real_name(self):
-        return self._name
-
-    def full_name(self):
-        if self._name is None:
-            return '.'.join(self.module)
-
-        return '.'.join([*self.module, self._name])
-
-    def __str__(self) -> str:
-        ret = ""
-        if self._name:
-            ret += f"from {'.'.join(self.module)} import {self._name}"
-        else:
-            ret += f"import {'.'.join(self.module)}"
-
-        return f"{ret} as {self.alias}" if self.alias else ret
-
-
-class Class:
-    def __init__(self):
-        self.name: str = ""
-        self.bases: list[str] = []
-
-    @singledispatchmethod
-    def visit(self, node: ast.AST):
-        pass
-
-    @visit.register
-    def _(self, node: ast.ClassDef):
-        '''
-        ClassDef(identifier name,
-             expr* bases,
-             keyword* keywords,
-             stmt* body,
-             expr* decorator_list)
-        '''
-        self.name = node.name
-
-        for base in node.bases:
-            self.bases.append(self.visit(base))
-
-        return self
-
-    @visit.register
-    def _(self, node: ast.Attribute):
-        '''
-            Attribute(expr value, identifier attr, expr_context ctx)
-        '''
-        return '.'.join([self.visit(node.value), node.attr])
-
-    @visit.register
-    def _(self, node: ast.Name):
-        '''
-            Name(identifier id, expr_context ctx)
-        '''
-        return node.id
-
-
-def get_import_name(import_: type | ModuleType) -> tuple[list[str], Optional[str]]:
-    # TODO use __qualname__ (dotted full name)
-    if isinstance(import_, type):
-        if import_.__module__ == 'builtins':
-            return [], import_.__name__
-
-        return import_.__module__.split('.'), import_.__name__
-
-    if isinstance(import_, ModuleType):
-        return import_.__name__.split('.'), None
-
-    raise TypeError("Only module and class imports are supported")
-
-
 class AST:
-    """AST parsing utility
-    Extracts:
-        - constants
-        - imports
-        - import aliases
-        - classes
-    """
-
     def __init__(self, tree: ast.Module):
         """Module level AST parsing utility.
         Will visit the AST and extract information automatically.
 
-        Unsupported but legal tree types:
+        Currently unsupported but legal tree types:
             - ast.Interactive
             - ast.Expression
             - ast.FunctionType
 
+        Extracts:
+            - constants
+            - imports
+            - import aliases
+            - classes
+
         Args:
             tree (ast.Module): Module to inspect
+
+        Info:
+            This is only constructible from a ast.Module instance.
+            Use the :code:`AST.parse(...)` or :code:`AST.load(...)` methods
+            to load AST from text or files.
         """
         assert isinstance(tree, ast.Module), "Tree is not of type ast.Module"
 
@@ -156,7 +73,7 @@ class AST:
 
     @singledispatchmethod
     def visit(self, node: ast.AST) -> None:
-        ''' Generic node visitor '''
+        """ Generic node visitor """
 
         if not isinstance(node, ast.AST):
             raise NotImplementedError
@@ -165,14 +82,24 @@ class AST:
 
     @visit.register
     def visit_module(self, node: ast.Module):
-        ''' Module(stmt* body, type_ignore* type_ignores) '''
+        """ Module
+
+        .. code-block:: ASDL
+
+           Module(stmt* body, type_ignore* type_ignores)
+        """
 
         for child_node in node.body:
             self.visit(child_node)
 
     @visit.register
     def visit_assign(self, node: ast.Assign):
-        ''' Assign(expr* targets, expr value, string? type_comment) '''
+        """ Assignment, ie :code:`foo = 3`
+
+        .. code-block:: ASDL
+
+           Assign(expr* targets, expr value, string? type_comment)
+        """
         # ignore type_comment, deduce type from value instead
 
         if len(node.targets) > 1:
@@ -187,7 +114,15 @@ class AST:
 
     @visit.register
     def visit_assign_annotated(self, node: ast.AnnAssign):
-        ''' AnnAssign(expr target, expr annotation, expr? value, int simple) '''
+        """ Assignment with type annotations, ie :code:`foo: int = 3`
+
+        .. code-block:: ASDL
+
+           AnnAssign(expr target,
+                     expr annotation,
+                     expr? value,
+                     int simple)
+        """
         # ignore annotation, deduce type from value instead
 
         if node.value is None:
@@ -198,14 +133,26 @@ class AST:
 
     @visit.register
     def visit_import(self, node: ast.Import):
-        ''' Import(alias* names) '''
+        """ Simple imports, ie :code:`import foo`
+
+        .. code-block:: ASDL
+
+           Import(alias* names)
+        """
         for name in node.names:
             self.imports.append(Import(module=name.name.split('.'),
                                        alias=name.asname))
 
     @visit.register
     def visit_import_from(self, node: ast.ImportFrom):
-        ''' ImportFrom(identifier? module, alias* names, int? level) '''
+        """ Import from module, ie `from foo import bar`
+
+        .. code-block:: ASDL
+
+           ImportFrom(identifier? module,
+                      alias* names,
+                      int? level)
+        """
         for name in node.names:
             self.imports.append(Import(name=name.name,
                                        module=node.module.split(
@@ -214,13 +161,16 @@ class AST:
 
     @visit.register
     def visit_class(self, node: ast.ClassDef):
-        '''
-        ClassDef(identifier name,
-             expr* bases,
-             keyword* keywords,
-             stmt* body,
-             expr* decorator_list)
-        '''
+        """ Class definition
+
+        .. code-block:: ASDL
+
+           ClassDef(identifier name,
+                    expr* bases,
+                    keyword* keywords,
+                    stmt* body,
+                    expr* decorator_list)
+        """
         self.classes.append(Class().visit(node))
 
     def try_constant(self, target: ast.expr, value: ast.expr):
@@ -257,8 +207,10 @@ class AST:
 
     def possible_names(self, base: type) -> Iterable[str]:
         """Yields all possible symbols referring to the target type.
+
         Args:
             base (type): The type of the target
+
         Yields:
             str: for every possible symbol referring to the target type
         """
@@ -295,7 +247,15 @@ class AST:
 
                 yield '.'.join([import_.name, *remainder] if import_.name else remainder)
 
-    def get_subclasses(self, base: type):
+    def get_subclasses(self, base: type) -> Iterable[Class]:
+        """Gets all subclasses of given base type.
+
+        Args:
+            base (type): the base type.
+
+        Yields:
+            Class: Every subclass of `base`.
+        """
         names = list(self.possible_names(base))
 
         for class_ in self.classes:
@@ -304,3 +264,126 @@ class AST:
                     continue
 
                 yield class_
+
+class Import:
+    def __init__(self, name: Optional[str] = None,
+                 module: Optional[list[str]] = None,
+                 alias: Optional[str] = None):
+        self._name = name
+        self.module = module or []
+        self.alias = alias
+
+    @property
+    def name(self):
+        return self.alias or self._name
+
+    @property
+    def real_name(self):
+        return self._name
+
+    def full_name(self):
+        if self._name is None:
+            return '.'.join(self.module)
+
+        return '.'.join([*self.module, self._name])
+
+    def __str__(self) -> str:
+        ret = ""
+        if self._name:
+            ret += f"from {'.'.join(self.module)} import {self._name}"
+        else:
+            ret += f"import {'.'.join(self.module)}"
+
+        return f"{ret} as {self.alias}" if self.alias else ret
+
+
+class Class:
+    def __init__(self):
+        self.name: str = ""
+        self.bases: list[str] = []
+
+    @singledispatchmethod
+    def visit(self, node: ast.AST):
+        pass
+
+    @visit.register
+    def visit_class(self, node: ast.ClassDef) -> 'Class':
+        """Visits class definition and extracts bases.
+
+        .. code-block:: ASDL
+
+           ClassDef(identifier name,
+                    expr* bases,
+                    keyword* keywords,
+                    stmt* body,
+                    expr* decorator_list)
+
+        Args:
+            node (ast.ClassDef): The class node
+
+        Returns:
+            Class: This object with properly set bases.
+        """
+
+        self.name = node.name
+
+        for base in node.bases:
+            self.bases.append(self.visit(base))
+
+        return self
+
+    @visit.register
+    def visit_attribute(self, node: ast.Attribute) -> str:
+        """Visits an attribute
+
+        .. code-block:: ASDL
+
+            Attribute(expr value,
+                      identifier attr,
+                      expr_context ctx)`
+
+        Returns:
+            str
+        """
+        return '.'.join([self.visit(node.value), node.attr])
+
+    @visit.register
+    def visit_name(self, node: ast.Name) -> str:
+        """Visits a variable name
+
+        .. code-block:: ASDL
+
+           Name(identifier id, expr_context ctx)
+
+        Args:
+            node (ast.Name): A variable name
+
+        Returns:
+            str: Variable name as a string.
+        """
+        return node.id
+
+
+def get_import_name(import_: type | ModuleType) -> tuple[list[str], Optional[str]]:
+    """Gets import name from type or module.
+
+    Args:
+        import_ (type | ModuleType): Target type or module.
+
+    Raises:
+        TypeError: Unsupported target type
+
+    Returns:
+        tuple[list[str], Optional[str]]: Package and module
+    """
+    # TODO use __qualname__ (dotted full name)
+    if isinstance(import_, type):
+        if import_.__module__ == 'builtins':
+            return [], import_.__name__
+
+        return import_.__module__.split('.'), import_.__name__
+
+    if isinstance(import_, ModuleType):
+        return import_.__name__.split('.'), None
+
+    raise TypeError("Only module and class imports are supported")

@@ -37,9 +37,30 @@ class Module:
     path: Path
 
     def transform(self, data: Iterable[tuple[Path, Any]]) -> Iterable[tuple[Path, Any]]:
+        """This step is intended to transform input data to something
+        pydantic can validate in the `validate` step.
+
+        Args:
+            data (Iterable[tuple[Path, Any]]): Iterable of inputs from the `ingest` pipeline
+
+        Yields:
+            tuple[Path, Any]: Transformed output
+        """
         yield from data
 
     def validate(self, data: Iterable[tuple[Path, Any]]) -> Iterable[tuple[Path, BaseModel | Any]]:
+        """Validates elements in the `data` Iterable against the pydantic schema `Schema` of this module.
+
+        Args:
+            data (Iterable[tuple[Path, Any]]): Iterable of inputs from the `transform` step
+
+        Yields:
+            tuple[Path, BaseModel | Any]: Input file path and validated `Schema` object
+
+        Warning:
+            By default inputs failing verification do not cause the module run to fail,
+            they simply get skipped.
+        """
         for path, value in data:
             try:
                 yield path, self.Schema.parse_obj(value)
@@ -48,14 +69,13 @@ class Module:
                 print_validationerror(ex)
 
     def render(self, data: Iterable[tuple[Path, BaseModel | Any]]) -> Iterable[tuple[Path, str]]:
-        """Render the prepared data.
+        """Renders the output content.
 
         Args:
-            data (Iterable[tuple[str, Meta, BaseModel]]): Generator producing
-                full name, meta information and verifies data against our schema
+            data (Iterable[tuple[str, Meta, BaseModel]]): Iterable of inputs from the `validate` step.
 
         Yields:
-            Iterable[tuple[Path, str]]: Yields relative output path and content for generated files
+            tuple[Path, str]: Output path and content for generated files
         """
         # Yes yes, this is intended.
         # despite yield being unreachable its existence will set the CO_GENERATOR flag
@@ -71,10 +91,10 @@ class Module:
         """Write the rendered files back to disk.
 
         Args:
-            output (Iterable[tuple[Path, str]]): Generator producing file content
+            output (Iterable[tuple[Path, str]]): Iterable of inputs from the `render` step
 
         Yields:
-            Iterable[Path]: Paths of generated files
+            Path: Path to every generated file
         """
         for filename, generated in output:
             filename = self.out_path / filename
@@ -86,13 +106,19 @@ class Module:
             yield filename
 
     def run(self, files: list[Path], jobs: Optional[int] = None) -> list[Path]:
-        """Runs the module's pipeline
+        """Runs the module's pipeline.
+        If the pipeline is a dictionary, it will loop through each item and run
+        the associated pipeline. Otherwise, it will run the single pipeline.
+
+        This method may be overridden for modules that do not wish to use the
+        default pipelines at all or need to do custom pipeline preprocessing.
 
         Args:
             files (list[Path]): possibly pre-filtered list of paths to consider for ingest.
+            jobs (Optional[int]): Maximum number of jobs to spawn. Defaults to None.
 
         Returns:
-            list[Path]: List of paths to generated files
+            list[Path]: Aggregated list of paths to generated files
         """
         output: list[Path] = []
 
@@ -128,6 +154,16 @@ Pipeline(s): {cls.pipeline}"""
         return self.to_string()
 
     def __init__(self, root_path: Path, out_path: Path, settings: Optional[dict[str, Any]] = None):
+        """Module constructor. If settings are provided they are checked against the `Settings` schema.
+
+        Args:
+            root_path (Path): Path to the project's root folder
+            out_path (Path): Output path
+            settings (Optional[dict[str, Any]], optional): Module settings. Defaults to None.
+
+        Raises:
+            SystemExit: If settings are provided but fail to validate
+        """
         self.root = root_path
         self.out_path = out_path
 
@@ -141,13 +177,33 @@ Pipeline(s): {cls.pipeline}"""
         except ValidationError as ex:
             logger.warning("Failed verifying config for `%s`", self.name)
             print_validationerror(ex)
+            # TODO rethrow ValidationError instead, make sure we terminate with retcode 1 somewhere else
             raise SystemExit(1) from ex
 
     @classmethod
     def __init_subclass__(cls, *,
                           name: Optional[str] = None,
                           private: bool = False) -> None:
+        """This class method is used to preprocess subclasses of the `Module` interface.
 
+
+        It sets the following attributes on the subclass:
+
+        Attributes:
+            path (Path):       Path object containing the filename of the subclass.
+            name (str):        Name of the subclass. If no name is provided,
+                               the name of the class converted to lowercase is used.
+            private (bool):    Indicates whether the subclass should be private or not.
+            ingest (Pipeline): Defaults `ingest` to ingest toml files matching the module name.
+                               Use `ingest = None` if you want to disable ingest.
+
+        Args:
+            name (Optional[str], optional): Overrides the module name. Defaults to None.
+            private (bool, optional):       Sets this module as private. Defaults to False.
+
+        Raises:
+            RuntimeError: Throws RuntimeError if an invalid ingest pipeline has been given.
+        """
         frame = traceback.extract_stack(limit=2)[0]
         setattr(cls, "path", Path(frame.filename))
 

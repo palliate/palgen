@@ -90,7 +90,7 @@ def find_backwards(filename: str, source_dir: Optional[Path] = None) -> Path:
 def _walk_worker(args: tuple[Path, PathSpec]):
     path, ignores = args
     if not path.is_dir():
-        raise NotADirectoryError
+        raise NotADirectoryError(f"{path} is not a directory.")
 
     if ignores.match_file(path):
         return [], []

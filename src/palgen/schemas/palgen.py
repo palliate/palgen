@@ -9,7 +9,7 @@ class ModuleSettings(BaseModel):
     inherit: bool = True
     # extra paths to check for modules
     folders: list[Path] = []
-    dependencies: Optional[Path] = None
+    dependencies: list[Path] = []
 
     # Loaders
     #toml: bool = False  # not implemented

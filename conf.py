@@ -23,9 +23,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.intersphinx',
     'sphinx.ext.autodoc.typehints',
-
-    'sphinx.ext.graphviz',
-    'sphinx.ext.inheritance_diagram',
+    'sphinx.ext.autosectionlabel',
 
     'autoapi.extension',
 
@@ -35,13 +33,15 @@ extensions = [
 
     'sphinxcontrib.test_reports',
     'sphinxcontrib.plantuml',
-    'sphinx_immaterial.graphviz'
+    'sphinx_immaterial.graphviz',
+
+    'sphinx_mdinclude'
 ]
 
 templates_path = ['docs/_templates']
 autoapi_template_dir = 'docs/_templates'
 root_doc = "index"
-exclude_patterns = ['build/*', 'venv/*', 'dist/*', '.tox/*']
+exclude_patterns = ['build/*', 'venv/*', 'dist/*', '.tox/*', '*/.pytest_cache/*', '.pytest_cache/*']
 
 
 # -- Options for HTML output -------------------------------------------------

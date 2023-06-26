@@ -16,15 +16,17 @@ class Modules:
     def __init__(self, project: ProjectSettings, settings: ModuleSettings, files: Iterable[Path], root: Path) -> None:
         self.private: dict[str, Type[Module]] = {}
         self.public: dict[str, Type[Module]] = {}
+        self.inherited: dict[str, Type[Module]] = {}
 
         module_paths = discover(settings.folders, gitignore(root), jobs=1)
 
         if settings.inherit:
             logger.info("Loading manifests")
-            self._extend(Manifest.ingest(module_paths))
+            for name, module in Manifest.ingest(module_paths):
+                self._append_checked(self.inherited, name, module)
 
-            if settings.dependencies:
-                self._extend(Manifest.load(settings.dependencies))
+            for name, module in Manifest.ingest(settings.dependencies):
+                self._append_checked(self.inherited, name, module)
 
         if settings.python:
             logger.info("Loading Python modules")
@@ -51,9 +53,21 @@ class Modules:
         target[name] = module
 
     @property
-    def runnables(self):
-        return self.public | self.private
+    def runnables(self) -> dict[str, Type[Module]]:
+        """Returns all runnable modules.
+        Runnable modules are all private and public modules, including inherited ones.
+
+        Returns:
+            dict[str, Type[Module]]: Runnable modules
+        """
+        return self.public | self.private | self.inherited
 
     @property
-    def exportables(self):
+    def exportables(self) -> dict[str, Type[Module]]:
+        """Returns all exportable modules.
+        Exportable modules are all public modules. Private and inherited ones are not exportable.
+
+        Returns:
+            dict[str, Type[Module]]: Runnable modules
+        """
         return self.public
