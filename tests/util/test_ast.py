@@ -19,8 +19,8 @@ def test_resolve_module():
     assert module == ['palgen']
     assert name is None
 
-    import palgen.module
-    module, name = get_import_name(palgen.module)
+    import palgen.interfaces.module
+    module, name = get_import_name(palgen.interfaces.module)
     assert module == ['palgen', 'module']
     assert name is None
 
@@ -32,31 +32,31 @@ def test_resolve_builtin():
 
 
 def test_resolve_bare():
-    import palgen.module
-    module, name = get_import_name(palgen.module.Module)
+    import palgen.interfaces.module
+    module, name = get_import_name(palgen.interfaces.module.Module)
     assert module == ['palgen', 'module']
     assert name == 'Module'
 
 
 def test_resolve_from():
-    from palgen.module import Module
+    from palgen.interfaces.module import Module
     module_name, name = get_import_name(Module)
     assert module_name == ['palgen', 'module']
     assert name == 'Module'
 
-    from palgen import module
+    from palgen.interfaces import module
     module_name, name = get_import_name(module.Module)
     assert module_name == ['palgen', 'module']
     assert name == 'Module'
 
 
 def test_resolve_alias():
-    from palgen.module import Module as templ
+    from palgen.interfaces.module import Module as templ
     module_name, name = get_import_name(templ)
     assert module_name == ['palgen', 'module']
     assert name == 'Module'
 
-    from palgen import module as mod
+    from palgen.interfaces import module as mod
     module_name, name = get_import_name(mod.Module)
     assert module_name == ['palgen', 'module']
     assert name == 'Module'
@@ -87,7 +87,7 @@ def test_import_relative():
 class TestParametrized:
 
     def test_import(self, import_, symbol):
-        from palgen.module import Module
+        from palgen.interfaces.module import Module
         ast = AST.parse(import_)
 
         assert len(ast.imports) == 1
@@ -98,7 +98,7 @@ class TestParametrized:
         assert possible[0] == symbol
 
     def test_class(self, import_, symbol):
-        from palgen.module import Module
+        from palgen.interfaces.module import Module
         ast = AST.parse(f"{import_}\nclass Foo({symbol}):\n  ...")
         subclasses = list(ast.get_subclasses(Module))
 

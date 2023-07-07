@@ -9,7 +9,7 @@ import pydot
 
 from palgen.ingest.filter import Extension, Folder
 from palgen.ingest.path import Relative, Absolute
-from palgen.module import Module, Sources, jobs
+from palgen.interfaces.module import Module, Sources, jobs
 from palgen.loaders.ast_helper import AST
 
 def run_pyreverse(cwd: Path, args):

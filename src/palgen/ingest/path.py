@@ -9,3 +9,5 @@ def Relative(self, files: Iterable[Path]) -> Iterable[Path]:
 def Absolute(self, files: Iterable[Path]) -> Iterable[Path]:
     for file in files:
         yield self.root / file
+
+__all__ = ['Relative']

@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 from sphinx.cmd.build import build_main
 
-from palgen.module import Module
+from palgen.interfaces.module import Module
 
 
 class Docs(Module):

@@ -1,6 +1,6 @@
 import click
-from palgen.palgen import Palgen
-from palgen.util.log import set_min_level
+from ..palgen import Palgen
+from ...application.log import set_min_level
 
 
 @click.command()

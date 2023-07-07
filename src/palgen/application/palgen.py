@@ -1,15 +1,80 @@
 import logging
 from functools import cached_property
 from pathlib import Path
+from typing import Iterable, Optional, Type
 
 import toml
 
-from palgen.modules import Modules
-from palgen.schemas import RootSettings, ProjectSettings, PalgenSettings
-from palgen.util.filesystem import discover, gitignore
+from ..interfaces import Module
+from ..loaders.manifest import Manifest, Python
+from ..schemas import PalgenSettings, ProjectSettings, RootSettings
 
+from ..machinery.filesystem import discover, gitignore
 
 _logger = logging.getLogger(__name__)
+
+class Modules:
+    __slots__ = ['private', 'public', 'inherited']
+
+    def __init__(self) -> None:
+        self.private: dict[str, Type[Module]] = {}
+        self.public: dict[str, Type[Module]] = {}
+        self.inherited: dict[str, Type[Module]] = {}
+
+
+    def extend(self, modules: Iterable[tuple[str, Type[Module]]]):
+        for name, module in modules:
+            target = self.private if module.private else self.public
+            self.append_checked(target, name, module)
+
+    def append_checked(self, target: dict[str, Type[Module]], name: str, module: Type[Module]):
+        if name in target:
+            other = target[name]
+            _logger.warning("Module name collision: %s defined in files %s and %s. "
+                           "Ignoring the latter.",
+                           name,
+                           other.path,
+                           module.path)
+            return
+
+        target[name] = module
+
+    @property
+    def runnables(self) -> dict[str, Type[Module]]:
+        """Returns all runnable modules.
+        Runnable modules are all private and public modules, including inherited ones.
+
+        Returns:
+            dict[str, Type[Module]]: Runnable modules
+        """
+        return self.public | self.private | self.inherited
+
+    @property
+    def exportables(self) -> dict[str, Type[Module]]:
+        """Returns all exportable modules.
+        Exportable modules are all public modules. Private and inherited ones are not exportable.
+
+        Returns:
+            dict[str, Type[Module]]: Runnable modules
+        """
+        return self.public
+
+    def manifest(self, relative_to: Optional[Path] = None) -> str:
+        """Returns exportable modules and their file paths as TOML-formatted string.
+
+        Returns:
+            str: TOML representation of exportable modules.
+        """
+        output = {}
+        for module in self.exportables.values():
+            path = module.path
+
+            if relative_to and path.is_relative_to(relative_to):
+                path = path.relative_to(relative_to)
+
+            output[module.module] = str(path)
+
+        return toml.dumps(output)
 
 
 class Palgen:
@@ -42,7 +107,8 @@ class Palgen:
             self.project.sources = self._expand_paths(self.project.sources)
 
         if self.options.modules.folders:
-            self.options.modules.folders = self._expand_paths(self.options.modules.folders)
+            self.options.modules.folders = self._expand_paths(
+                self.options.modules.folders)
 
         self.output = self._path_for(self.options.output) \
             if self.options.output else self.root
@@ -58,7 +124,8 @@ class Palgen:
         Returns:
             list[Path]: input files
         """
-        files: list[Path] = discover(self.project.sources, gitignore(self.root), jobs=self.options.jobs)
+        files: list[Path] = discover(
+            self.project.sources, gitignore(self.root), jobs=self.options.jobs)
         if not files:
             _logger.warning("No source files detected.")
         return files
@@ -69,22 +136,30 @@ class Palgen:
 
         First access to this can be slow, since it has to actually load the modules.
         """
-        return Modules(self.project, self.options.modules, self.files, self.root)
+        modules = Modules()
+        module_paths = discover(
+            self.options.modules.folders, gitignore(self.root), jobs=1)
 
-    """@cached_property
-    def subprojects(self) -> dict[str, Palgen]:
-        # TODO remove, unused
-        subprojects_: dict[str, Palgen] = {}
-        for file in self.files.by_name('palgen.toml'):
-            loader = Palgen(file)
-            if loader.project.name in subprojects_:
-                _logger.warning("Found project %s more than once.",
-                               loader.project.name)
-                continue
+        module_settings = self.options.modules
 
-            subprojects_[loader.project.name] = loader
+        if module_settings.inherit:
+            manifest_loader = Manifest()
+            _logger.debug("Loading manifests")
+            for name, module in manifest_loader.ingest(module_paths):
+                modules.append_checked(modules.inherited, name, module)
 
-        return subprojects_"""
+            for name, module in manifest_loader.ingest(module_settings.dependencies):
+                modules.append_checked(modules.inherited, name, module)
+
+        if module_settings.python:
+            python_loader = Python(project=self.project)
+            _logger.debug("Loading Python modules")
+            modules.extend(python_loader.ingest(module_paths))
+
+            if module_settings.inline:
+                modules.extend(python_loader.ingest(self.files))
+
+        return modules
 
     def _path_for(self, folder: str | Path) -> Path:
         path = Path(folder)
@@ -111,13 +186,14 @@ class Palgen:
             return []
 
         module = self.modules.runnables[name](self.root, self.output, settings)
-        _logger.info("Running module `%s` with %d jobs", module.name, self.options.jobs or 1)
+        _logger.info("Running module `%s` with %d jobs",
+                     module.name, self.options.jobs or 1)
 
         try:
             return module.run(self.files, self.options.jobs or 1)
         except Exception as exception:
             _logger.exception("Running failed: %s: %s",
-                             type(exception).__name__, exception)
+                              type(exception).__name__, exception)
 
             # TODO do not terminate using SystemExit here
             raise SystemExit(1) from exception
@@ -132,7 +208,7 @@ class Palgen:
         for name, settings in self.settings.items():
 
             if name not in self.modules.runnables:
-                if  name not in ('palgen', 'project'):
+                if name not in ('palgen', 'project'):
                     _logger.warning("Module `%s` not found.", name)
                 continue
 

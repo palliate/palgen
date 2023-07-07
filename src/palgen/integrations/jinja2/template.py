@@ -5,7 +5,7 @@ from typing import Optional
 
 import jinja2
 
-from palgen.util import copy_attrs
+from palgen.machinery import copy_attrs
 
 
 class Template(jinja2.Template):

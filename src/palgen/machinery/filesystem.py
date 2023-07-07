@@ -1,20 +1,13 @@
 import logging
 from multiprocessing.pool import Pool
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Optional
 
 from pathspec import PathSpec
 from pathspec.patterns.gitwildmatch import GitWildMatchPattern
 
-from palgen.util import Pipeline
 
 _logger = logging.getLogger(__name__)
-
-
-class Sources(Pipeline):
-    def __call__(self, state: list[Path]):
-        assert isinstance(state, list)
-        yield from super().__call__(state)
 
 
 def gitignore(path: Path):
@@ -40,7 +33,7 @@ def gitignore(path: Path):
         return PathSpec([])
 
 
-def walk(path: Path, ignores: PathSpec, jobs: Optional[int] = None) -> list[Path]:
+def walk(path: Path, ignores: PathSpec = PathSpec([]), jobs: Optional[int] = None) -> list[Path]:
     """traverse a directory tree and return a list of Path objects
     representing the files and folders found in the directory.
 
@@ -98,11 +91,6 @@ def _walk_worker(args: tuple[Path, PathSpec]):
     if (probe := path / '.gitignore').exists():
         ignores = PathSpec(ignores.patterns)
         ignores += gitignore(probe)
-
-    '''if (probe := path / 'palgen.toml').exists():
-            # skip subtrees of other projects but yield the project file
-            _logger.debug("Found another palgen project in `%s`. Skipping.")
-            return [], [probe]'''
 
     folders = []
     entries = []

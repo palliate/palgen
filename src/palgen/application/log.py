@@ -2,7 +2,7 @@
 
 import logging
 import sys
-
+import colorama
 
 class LogFormatter(logging.Formatter):
     """Custom log formatter"""
@@ -49,13 +49,17 @@ class LogFormatter(logging.Formatter):
 
 
 def setup_logger() -> None:
-    """Enables this custom _logger globally."""
+    """Enables this custom logger globally."""
+    colorama.init()
+
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(logging.DEBUG)
     handler.setFormatter(LogFormatter())
 
     logging.basicConfig(level=logging.INFO, handlers=[handler], force=True)
     logging.root.addHandler(handler)
+
+    sys.excepthook = handle_exception
 
 
 def set_min_level(level: int):
@@ -65,3 +69,19 @@ def set_min_level(level: int):
         level (int): log level #TODO copy description from palliate
     """
     logging.root.setLevel((1 + level) * 10)
+
+def handle_exception(type_, value, trace):
+    """Global exception handler.
+    Prints uncaught exceptions with the custom formatter.
+
+    Args:
+        type_: Exception type
+        value: Exception value
+        trace: Exception trace
+    """
+    logger = logging.getLogger(__package__)
+
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.exception("Exception occured: ", exc_info=(type_, value, trace))
+    else:
+        logger.critical("Exception occured: %s %s", type_.__name__, value)

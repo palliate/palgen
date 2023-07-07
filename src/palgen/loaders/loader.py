@@ -2,7 +2,7 @@ from pathlib import Path
 from abc import abstractmethod
 from typing import Generator, Type
 
-from palgen.module import Module
+from ..interfaces import Module
 
 LoaderGenerator = Generator[tuple[str, Type[Module]], None, None]
 class Loader:

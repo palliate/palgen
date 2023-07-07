@@ -1,6 +1,6 @@
-def normalize(type_: type):
+def normalize_type(type_: type):
     return getattr(type_, '__origin__', type_)
 
 
 def issubtype(type_: type, bases: type | tuple[type, ...]):
-    return issubclass(normalize(type_), bases)
+    return issubclass(normalize_type(type_), bases)

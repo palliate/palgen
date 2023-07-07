@@ -6,11 +6,12 @@ from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from typing import Iterable, Optional
 
-from palgen.ingest.filter import Extension
-from palgen.schemas import ProjectSettings
+from ..ingest import Extension
+from ..schemas import ProjectSettings
+from ..interfaces import Module
 
 from .ast_helper import AST
-from .loader import Loader, LoaderGenerator, Module
+from .loader import Loader, LoaderGenerator
 
 _logger = logging.getLogger(__name__)
 

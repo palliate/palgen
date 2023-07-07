@@ -1,11 +1,8 @@
 import ast
-import logging
 from functools import singledispatchmethod
 from pathlib import Path
 from types import ModuleType
-from typing import Any, Iterable, Optional, Self
-
-_logger = logging.getLogger(__name__)
+from typing import Any, Iterable, Optional
 
 
 class AST:

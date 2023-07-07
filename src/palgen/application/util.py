@@ -4,8 +4,11 @@ from typing import Annotated, Union, get_args, get_origin, get_type_hints
 
 import click
 
-from palgen.util import strip_quotes
 
+def strip_quotes(string):
+    if string[0] == string[-1] and string[0] in ('\'', '\"'):
+        return string[1:-1]
+    return string
 
 class ListParam(ABC, click.ParamType):
     name = "list"

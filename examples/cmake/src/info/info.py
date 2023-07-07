@@ -4,8 +4,8 @@ from palgen.ingest.filter import Name
 from palgen.ingest.loader import Empty
 from palgen.ingest.path import Relative
 
-from palgen.schemas.project import ProjectSettings
-from palgen.module import Module, Sources
+from palgen.schemas import ProjectSettings
+from palgen.interfaces import Module, Sources
 from palgen.integrations.jinja2 import Template
 
 

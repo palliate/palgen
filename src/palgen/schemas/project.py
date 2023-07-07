@@ -1,12 +1,10 @@
 from pathlib import Path
 from typing import Annotated, Optional
 
-from pydantic import Field
-
-from palgen.util.schema import Model
+from pydantic import Field, BaseModel
 
 
-class ProjectSettings(Model):
+class ProjectSettings(BaseModel):
     name:        Annotated[str, "Project name"]
     version:     Annotated[str, Field(regex=r"^[0-9.]+$"), "Version number"]
     description: Annotated[Optional[str], "Project description"] = ""

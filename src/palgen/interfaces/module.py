@@ -3,12 +3,12 @@ import traceback
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel as Model
+from pydantic import ValidationError
 
-from palgen.ingest.filter import Extension, Name
-from palgen.ingest.loader import Nothing, Toml
-from palgen.util import Sources, Pipeline, setattr_default
-from palgen.util.schema import Model, check_schema_attribute, print_validationerror
+from ..ingest import Extension, Name, Nothing, Toml
+from ..machinery import setattr_default
+from ..machinery import Pipeline as Sources
 
 _logger = logging.getLogger(__name__)
 
@@ -28,8 +28,8 @@ class Module:
     private: bool
 
     # pipelines
-    ingest: Pipeline | dict[str, Pipeline]
-    pipeline: Pipeline | dict[str, Pipeline]
+    ingest: Sources | dict[str, Sources]
+    pipeline: Sources | dict[str, Sources]
 
     # set by the loader
     module: str
@@ -47,7 +47,7 @@ class Module:
         """
         yield from data
 
-    def validate(self, data: Iterable[tuple[Path, Any]]) -> Iterable[tuple[Path, BaseModel | Any]]:
+    def validate(self, data: Iterable[tuple[Path, Any]]) -> Iterable[tuple[Path, Model | Any]]:
         """Validates elements in the `data` Iterable against the pydantic schema `Schema` of this module.
 
         Args:
@@ -65,9 +65,9 @@ class Module:
                 yield path, self.Schema.parse_obj(value)
             except ValidationError as ex:
                 _logger.warning("%s failed verification.", path)
-                print_validationerror(ex)
+                _print_validationerror(ex)
 
-    def render(self, data: Iterable[tuple[Path, BaseModel | Any]]) -> Iterable[tuple[Path, str]]:
+    def render(self, data: Iterable[tuple[Path, Model | Any]]) -> Iterable[tuple[Path, str]]:
         """Renders the output content.
 
         Args:
@@ -175,7 +175,7 @@ Pipeline(s): {cls.pipeline}"""
 
         except ValidationError as ex:
             _logger.warning("Failed verifying config for `%s`", self.name)
-            print_validationerror(ex)
+            _print_validationerror(ex)
             # TODO rethrow ValidationError instead, make sure we terminate with retcode 1 somewhere else
             raise SystemExit(1) from ex
 
@@ -209,28 +209,28 @@ Pipeline(s): {cls.pipeline}"""
         setattr_default(cls, "name", name or cls.__name__.lower())
         setattr_default(cls, "private", private)
 
-        setattr_default(cls, "ingest", Pipeline >> Extension('toml')
-                                                >> Name(getattr(cls, "name"))
-                                                >> Toml)
+        setattr_default(cls, "ingest", Sources() >> Extension('toml')
+                                                 >> Name(getattr(cls, "name"))
+                                                 >> Toml)
         assert hasattr(cls, "ingest")
         ingest = getattr(cls, "ingest")
 
         if not hasattr(cls, "pipeline"):
             match ingest:
-                case Pipeline():
-                    setattr(cls, "pipeline", Pipeline() >> ingest
-                                                        >> cls.transform
-                                                        >> cls.validate
-                                                        >> cls.render
-                                                        >> cls.write)
+                case Sources():
+                    setattr(cls, "pipeline", Sources() >> ingest
+                                                       >> cls.transform
+                                                       >> cls.validate
+                                                       >> cls.render
+                                                       >> cls.write)
                     logging.debug("Pipeline: \n%s", str(getattr(cls, "pipeline")))
                 case None:
-                    setattr(cls, "pipeline", Pipeline() >> Nothing)
+                    setattr(cls, "pipeline", Sources() >> Nothing)
                     logging.debug("Pipeline: \n%s", str(getattr(cls, "pipeline")))
                 case dict():
                     pipelines = {}
                     for key, value in ingest.items():
-                        pipeline = Pipeline >> value
+                        pipeline = Sources() >> value
                         for fnc in 'transform', 'validate', 'render':
                             name = f"{fnc}_{key}"
                             pipeline >>= getattr(cls, name, getattr(cls, fnc))
@@ -243,7 +243,22 @@ Pipeline(s): {cls.pipeline}"""
                 case _:
                     raise RuntimeError("Invalid ingest")
 
-        check_schema_attribute(cls, "Settings")
-        check_schema_attribute(cls, "Schema")
+        _check_schema_attribute(cls, "Settings")
+        _check_schema_attribute(cls, "Schema")
 
-__all__ = ['Module', 'Sources']
+def _check_schema_attribute(cls: type, name: str):
+    if hasattr(cls, name) and (schema := getattr(cls, name)):
+        assert isinstance(schema, type), \
+            f"Schema {name} of class `{cls.__name__}` is not a type."
+        assert issubclass(schema, Model), \
+            f"Schema {name} of class `{cls.__name__}` isn't a pydantic model."
+
+
+def _print_validationerror(exception: ValidationError):
+    for error in exception.errors():
+        for loc in error["loc"]:
+            _logger.warning("  %s", loc)
+        _logger.warning("    %s (type=%s)", error["msg"], error["type"])
+
+
+__all__ = ['Model', 'Module', 'Sources']

@@ -3,7 +3,7 @@ from typing import Annotated
 import pytest
 from pydantic import BaseModel
 
-from palgen.cli.util import pydantic_to_click, ListParam, DictParam
+from palgen.application.util import pydantic_to_click, ListParam, DictParam
 from palgen.util.typing import issubtype, normalize
 
 

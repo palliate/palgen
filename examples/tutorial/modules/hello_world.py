@@ -1,6 +1,6 @@
 import logging
 
-from palgen.module import Module, Model
+from palgen.interfaces.module import Module, Model
 
 # module class must inherit from palgen.module.Module
 class HelloWorld(Module):

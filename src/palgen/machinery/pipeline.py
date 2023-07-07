@@ -1,13 +1,12 @@
 import inspect
+import logging
 from functools import partial, reduce
 from inspect import isfunction, isgenerator, ismethod, signature
-import logging
 from multiprocessing import cpu_count
+from multiprocessing.pool import Pool
 from typing import Any, Callable, Generator, Iterable, Optional
 
-from multiprocessing.pool import Pool
-
-from palgen.util.typing import issubtype
+from .types import issubtype
 
 _logger = logging.getLogger(__name__)
 

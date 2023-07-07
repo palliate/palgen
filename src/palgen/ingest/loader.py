@@ -30,7 +30,7 @@ class Empty(Ingest):
                 yield file, None
             else:
                 _logger.warning("%s matches ingest configuration but is not empty.",
-                               file)
+                                file)
 
 
 class Nothing(Ingest):
@@ -38,6 +38,7 @@ class Nothing(Ingest):
         return
         # sourcery skip: remove-unreachable-code; pylint: disable=unreachable
         yield  # type: ignore [unreachable]
+
 
 class Raw(Ingest):
     def ingest(self, files: Iterable[Path]) -> Iterable[tuple[Path, bytes]]:
@@ -67,4 +68,3 @@ class Toml(Ingest):
 
         for path in files:
             yield path, toml.loads(path.read_text())
-

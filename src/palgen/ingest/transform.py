@@ -1,4 +1,4 @@
-def compress(data, namespace=None, separator='.'):
+def CompressKeys(data, namespace=None, separator='.'):
     if namespace is None:
         namespace = []
 
@@ -10,4 +10,4 @@ def compress(data, namespace=None, separator='.'):
         return
 
     for key, value in data.items():
-        yield from compress(value, namespace + [key], separator)
+        yield from CompressKeys(value, namespace + [key], separator)

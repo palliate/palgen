@@ -2,10 +2,8 @@ import re
 from pathlib import Path
 from typing import Iterable
 
-from palgen.ingest.filter import Extension
-from palgen.ingest.loader import Text
-from palgen.ingest.path import Relative
-from palgen.module import Module, Sources
+from palgen.ingest import Extension, Text, Relative
+from palgen.interfaces import Module, Sources
 
 
 class FString(Module):
@@ -17,9 +15,6 @@ class FString(Module):
 
     replacement_pattern = re.compile(r"((?<!{)|{{){(?P<variable>(::|[\w_.()$])*)"
                                      r"(?P<format_spec>:[^}]*)?}")
-
-    def validate(self, data):
-        yield from data
 
     def render(self, data: Iterable[tuple[Path, str]]):
         def replace_literal(string: re.Match[str]):
@@ -35,6 +30,7 @@ class FString(Module):
             def replace_variable(replacement: re.Match[str]):
                 if not replacement['variable']:
                     return replacement.group()
+
                 variables.append(replacement['variable'])
                 return replacement.group().replace(replacement['variable'], '')
 
@@ -46,10 +42,7 @@ class FString(Module):
             else:
                 literal = f'{prefix}"{literal}"'
 
-            if variables:
-                return f'std::format({literal}, {",".join(variables)}).c_str()'
-
-            return literal
+            return f'std::format({literal}, {",".join(variables)}).c_str()' if variables else literal
 
         for path, content in data:
             yield self.out_path / path, re.sub(FString.string_pattern, replace_literal, content)
