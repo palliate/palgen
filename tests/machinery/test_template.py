@@ -1,11 +1,11 @@
 from pathlib import Path
 from traceback import FrameSummary
-from palgen import util
+from palgen.machinery.template import get_caller
 
 
 def test_caller():
     def inner() -> FrameSummary:
-        return util.get_caller()
+        return get_caller()
 
     def outer() -> FrameSummary:
         return inner()
@@ -14,13 +14,3 @@ def test_caller():
     assert outer().line == "return inner()"
     assert outer().lineno == 11
     assert outer().filename == __file__
-
-
-def test_caller_path():
-    def inner() -> Path:
-        return util.get_caller_path()
-
-    def outer() -> Path:
-        return inner()
-
-    assert outer() == Path(__file__)

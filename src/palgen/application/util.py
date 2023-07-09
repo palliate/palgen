@@ -1,6 +1,6 @@
 from abc import ABC
 from types import UnionType
-from typing import Annotated, Union, get_args, get_origin, get_type_hints
+from typing import Annotated, Any, Iterable, Union, get_args, get_origin, get_type_hints
 
 import click
 
@@ -11,6 +11,9 @@ def strip_quotes(string):
     return string
 
 class ListParam(ABC, click.ParamType):
+    """Click friendly list proxy. Can be used like a parameterized generic,
+    ie ListParam[int] will check if all elements of the list are actually of type int.
+    """
     name = "list"
     inner_t: type
 
@@ -36,6 +39,10 @@ class ListParam(ABC, click.ParamType):
 
 
 class DictParam(ABC, click.ParamType):
+    """Click friendly dict proxy. Can be used like a parameterized generic.
+    ie: :code:`DictParam[str, int] will check all keys for type :code:`str`
+    and all values for type :code:`int`
+    """
     name = "dict"
     key_t: type
     value_t: type
@@ -75,15 +82,50 @@ class DictParam(ABC, click.ParamType):
 
 
 def extract_help(hint) -> str:
+    """Extracts help text from a variable annotated with an :code:`Annotated[...]`
+    with at least one string among the parameters.
+
+    ie. :code:`Annotated[int, "This takes a whole number"]`
+    also supports unions and parameterized generics as parameters, ie
+    :code:`Annotated[int | str, "Takes a number or a string"]`
+    :code:`Annotated[ListParam[int], "Takes a list of ints"]`
+
+    Args:
+        hint (_type_): _description_
+
+    Returns:
+        str: _description_
+    """
     assert get_origin(hint) is Annotated
 
-    _, *args = get_args(hint)
+    args = get_args(hint)
     return next((hint for hint in args if isinstance(hint, str)), "")
 
-def pydantic_to_click(cls: type):
+def pydantic_to_click(cls: type) -> Iterable[tuple[str, dict[str, Any]]]:
+    """Converts a module's Settings schema to click arguments.
+
+    To make an argument optional annotated with a union of the desired type and :code:`None`
+    or utilize :code:`typing.Optional`.
+
+    Attributes annotated with :code:`bool` will have :code:`is_flag` set, meaning they will be treated as flags.
+
+    Help text is automatically extracted from attributes annotated with :code:`Annotated[..., "help text"]`
+
+    Args:
+        cls (type): Setting schema
+
+    Raises:
+        TypeError: Invalid annotation found.
+
+    Yields:
+        tuple[str, dict[str, Any]]: Tuple consisting of attribute key and converted options.
+    """
+
+    #TODO consider moving this into `palgen.machinery`
     hints = get_type_hints(cls, include_extras=True)
 
     for key, field in getattr(cls, "__fields__").items():
+        assert isinstance(key, str)
 
         options = {
             'type': field.type_,

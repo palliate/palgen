@@ -161,13 +161,6 @@ class Palgen:
 
         return modules
 
-    def _path_for(self, folder: str | Path) -> Path:
-        path = Path(folder)
-        return path if path.is_absolute() else self.root / path
-
-    def _expand_paths(self, folders: list[Path]) -> list[Path]:
-        return [self._path_for(folder) for folder in folders]
-
     def run(self, name: str, settings: dict) -> list[Path]:
         """Runs the specified module with the given settings.
 
@@ -215,6 +208,13 @@ class Palgen:
             generated.extend(self.run(name, settings))
 
         _logger.info("Generated %d files.", len(generated))
+
+    def _path_for(self, folder: str | Path) -> Path:
+        path = Path(folder)
+        return path if path.is_absolute() else self.root / path
+
+    def _expand_paths(self, folders: list[Path]) -> list[Path]:
+        return [self._path_for(folder) for folder in folders]
 
     def __eq__(self, other) -> bool:
         if isinstance(other, Path):

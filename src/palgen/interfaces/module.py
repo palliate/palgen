@@ -1,7 +1,7 @@
 import logging
 import traceback
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable, Optional, Type
 
 from pydantic import BaseModel as Model
 from pydantic import ValidationError
@@ -21,57 +21,57 @@ def jobs(max_jobs: int):
 
 
 class Module:
-    Settings = Model
-    Schema = Model
+    Settings: Type[Model] = Model # Schema for module configuration
+    Schema: Optional[Type[Model]] # Optional schema to be used to validate each ingested item.
 
-    name: str  # defaults to lowercase class name
-    private: bool
+    name: str               # Module name. Defaults to lowercase class name
+    private: bool           # Whether this module is local to this project.
+                            # Setting this to true mangles the import name
+    template: Optional[str] # Optional module template name to fetch defaults from
 
     # pipelines
-    ingest: Sources | dict[str, Sources]
-    pipeline: Sources | dict[str, Sources]
+    ingest: Sources | dict[str, Sources]   # Pipeline used to select and read input files
+    pipeline: Sources | dict[str, Sources] # Overall module pipeline.
+                                           # Override this if you want to disable all default steps
 
     # set by the loader
-    module: str
-    path: Path
+    module: str # full module name
+    path: Path  # path to the concrete module
 
     def transform(self, data: Iterable[tuple[Path, Any]]) -> Iterable[tuple[Path, Any]]:
         """This step is intended to transform input data to something
-        pydantic can validate in the `validate` step.
+        pydantic can validate in the :code:`validate` step.
+
+        By default does nothing.
 
         Args:
-            data (Iterable[tuple[Path, Any]]): Iterable of inputs from the `ingest` pipeline
+            data (Iterable[tuple[Path, Any]]): Iterable of inputs from the :code:`ingest` pipeline
 
         Yields:
             tuple[Path, Any]: Transformed output
         """
         yield from data
 
-    def validate(self, data: Iterable[tuple[Path, Any]]) -> Iterable[tuple[Path, Model | Any]]:
-        """Validates elements in the `data` Iterable against the pydantic schema `Schema` of this module.
+    def validate(self, data: Iterable[tuple[Path, Any]]) -> Iterable[tuple[Path, Any]]:
+        """Intended to validate elements in the :code:`data` Iterable against the pydantic schema :code:`Schema` of this module.
+
+        By default does nothing.
 
         Args:
-            data (Iterable[tuple[Path, Any]]): Iterable of inputs from the `transform` step
+            data (Iterable[tuple[Path, Any]]): Iterable of inputs from the :code:`transform` step
 
         Yields:
-            tuple[Path, BaseModel | Any]: Input file path and validated `Schema` object
-
-        Warning:
-            By default inputs failing verification do not cause the module run to fail,
-            they simply get skipped.
+            tuple[Path, BaseModel | Any]: Input file path and validated :code:`Schema` object
         """
-        for path, value in data:
-            try:
-                yield path, self.Schema.parse_obj(value)
-            except ValidationError as ex:
-                _logger.warning("%s failed verification.", path)
-                _print_validationerror(ex)
+        yield from data
 
-    def render(self, data: Iterable[tuple[Path, Model | Any]]) -> Iterable[tuple[Path, str]]:
-        """Renders the output content.
+    def render(self, data: Iterable[tuple[Path, Model | Any]]) -> Iterable[tuple[Path, str | bytes]]:
+        """Intended to render the output content.
+
+        By default cancels the pipeline at this point.
 
         Args:
-            data (Iterable[tuple[str, Meta, BaseModel]]): Iterable of inputs from the `validate` step.
+            data (Iterable[tuple[str, Meta, BaseModel]]): Iterable of inputs from the :code:`validate` step.
 
         Yields:
             tuple[Path, str]: Output path and content for generated files
@@ -86,11 +86,11 @@ class Module:
         # sourcery skip: remove-unreachable-code; pylint: disable=unreachable
         yield Path(), ""  # type: ignore [unreachable]
 
-    def write(self, output: Iterable[tuple[Path, str]]) -> Iterable[Path]:
+    def write(self, output: Iterable[tuple[Path, str | bytes]]) -> Iterable[Path]:
         """Write the rendered files back to disk.
 
         Args:
-            output (Iterable[tuple[Path, str]]): Iterable of inputs from the `render` step
+            output (Iterable[tuple[Path, str]]): Iterable of inputs from the :code:`render` step
 
         Yields:
             Path: Path to every generated file
@@ -153,11 +153,13 @@ Pipeline(s): {cls.pipeline}"""
         return self.to_string()
 
     def __init__(self, root_path: Path, out_path: Path, settings: Optional[dict[str, Any]] = None):
-        """Module constructor. If settings are provided they are checked against the `Settings` schema.
+        """Module constructor. If settings are provided they are checked against the :code:`Settings` schema.
+
+        It's not recommended to override this unless you want to disable settings validation.
 
         Args:
-            root_path (Path): Path to the project's root folder
-            out_path (Path): Output path
+            root_path (Path):                              Path to the project's root folder
+            out_path (Path):                               Output path
             settings (Optional[dict[str, Any]], optional): Module settings. Defaults to None.
 
         Raises:
@@ -193,8 +195,8 @@ Pipeline(s): {cls.pipeline}"""
             name (str):        Name of the subclass. If no name is provided,
                                the name of the class converted to lowercase is used.
             private (bool):    Indicates whether the subclass should be private or not.
-            ingest (Pipeline): Defaults `ingest` to ingest toml files matching the module name.
-                               Use `ingest = None` if you want to disable ingest.
+            ingest (Pipeline): Defaults :code:`ingest` to ingest toml files matching the module name.
+                               Use :code:`ingest = None` if you want to disable ingest.
 
         Args:
             name (Optional[str], optional): Overrides the module name. Defaults to None.

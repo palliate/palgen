@@ -1,6 +1,6 @@
 import pytest
-from palgen.util import Pipeline
-from palgen.util.pipeline import PipelineMeta
+from palgen.machinery import Pipeline
+from palgen.machinery.pipeline import PipelineMeta
 
 
 def passthrough(data):

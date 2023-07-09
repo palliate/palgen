@@ -4,7 +4,7 @@ from palgen import Palgen
 
 
 def test_load():
-    root = Path(__file__).parent / "mock"
+    root = Path(__file__).parent.parent / "mock"
 
     project = Palgen(root / "palgen.toml")
     assert project.root == root

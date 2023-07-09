@@ -4,7 +4,7 @@ import pytest
 from pydantic import BaseModel
 
 from palgen.application.util import pydantic_to_click, ListParam, DictParam
-from palgen.util.typing import issubtype, normalize
+from palgen.machinery.types import issubtype
 
 
 class BuildTypes(Enum):

@@ -1,7 +1,7 @@
 [project]
   name = "mock"
   version = "0.1"
-  folders = ["src"]
+  sources = ["src"]
 
 [templates]
   folders = ["templates"]

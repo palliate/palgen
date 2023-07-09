@@ -34,8 +34,7 @@ def gitignore(path: Path):
 
 
 def walk(path: Path, ignores: PathSpec = PathSpec([]), jobs: Optional[int] = None) -> list[Path]:
-    """traverse a directory tree and return a list of Path objects
-    representing the files and folders found in the directory.
+    """Traverse a directory tree and return a list of Path objects representing the files and folders found in the directory.
 
     Args:
         path (Path): Path to the directory to traverse
@@ -58,6 +57,9 @@ def walk(path: Path, ignores: PathSpec = PathSpec([]), jobs: Optional[int] = Non
         return output
 
     with Pool(processes=jobs) as pool:
+        # TODO investigate possible bugs:
+        # - gitignore sometimes seems to be disregarded when running multiple jobs
+        # - running with multiple jobs hangs if module is ran directly
         while tasks:
             ret = pool.map(_walk_worker, tasks)
             tasks = []
@@ -66,12 +68,34 @@ def walk(path: Path, ignores: PathSpec = PathSpec([]), jobs: Optional[int] = Non
                 output.extend(new_output)
         return output
 
-def discover(paths: list[Path], ignores: PathSpec, jobs: Optional[int] = None) -> list[Path]:
+def discover(paths: list[Path], ignores: Optional[PathSpec] = None, jobs: Optional[int] = None) -> list[Path]:
+    """Walks through every folder in :code:`paths`, returns list of all non-ignored files and folders.
+
+    Args:
+        paths (list[Path]): List of paths to walk through
+        ignores (Optional[PathSpec], optional): Patterns to match files and folders which ought to be ignored. You probably want to use :code:`gitignore(...)` to get a :code:`PathSpec` object for this parameter.
+        jobs (Optional[int], optional): Amount of jobs to run this at. Defaults to None, meaning however many cpu cores the system has.
+
+    Returns:
+        list[Path]: _description_
+    """
     return [element
             for path in paths
             for element in walk(path, ignores, jobs)]
 
 def find_backwards(filename: str, source_dir: Optional[Path] = None) -> Path:
+    """Traverse up the folder hierarchy until any of the parent folders contain the file we're looking for.
+
+    Args:
+        filename (str): Name of the file to be found
+        source_dir (Optional[Path], optional): What folder to start searching in. Defaults to the current working directory.
+
+    Raises:
+        FileNotFoundError: File wasn't found
+
+    Returns:
+        Path: Path to the file if it was found
+    """
     current_dir: Path = source_dir or Path.cwd()
     while current_dir:
         if (file_path := current_dir / filename).exists():
