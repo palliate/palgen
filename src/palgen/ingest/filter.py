@@ -49,7 +49,7 @@ class Filter:
     def match_files(self, files: Iterable[Path], attribute=None):
         """
         Args:
-            files: iterable of files to check against
+            files: input Iterable of files to filter
             attribute: attribute of the pathlib.Path object to check against
 
         Yields:
@@ -65,7 +65,7 @@ class Filter:
     def filter(self, files: Iterable[Path]) -> Iterable[Path]:
         """
         Args:
-            files: list of files to check against
+            files: input Iterable of files to filter
 
         Yields:
             Path: for every file that matches any of the needles
@@ -75,7 +75,7 @@ class Filter:
     def __call__(self, file_cache: Iterable[Path]) -> Iterable[Path]:
         """
         Args:
-            file_cache: list of files to check against
+            file_cache: input Iterable of files to filter
 
         Yields:
             Path: for every file that matches any of the needles
@@ -87,13 +87,21 @@ class Pattern(Filter):
     def __init__(self, *patterns: str | re.Pattern[str], unix: bool = False) -> None:
         """ Filter by regex or unix pattern. Equivalent to Filter(..., regex=True)
         Args:
-            patterns: iterable of strings or regex patterns
+            patterns: Iterable of strings or regex patterns
             unix: if True, all needles will be interpreted as unix patterns
         """
         super().__init__(*patterns, regex=True, unix=unix)
 
 class Folder(Filter):
     def filter(self, files: Iterable[Path]) -> Iterable[Path]:
+        """Filters by folder name. This will match folder names at any level
+
+        Args:
+            files (Iterable[Path]): input Iterable of files to filter
+
+        Yields:
+            Path: for every file that matches any of the needles
+        """
         for file in files:
             if any(self.match_str(part) for part in file.parts):
                 yield file
@@ -103,7 +111,7 @@ class Extension(Filter):
         """Filters by name
 
         Args:
-            files (Iterable[Path]): list of files to check against
+            files (Iterable[Path]): input Iterable of files to filter
 
         Yields:
             Path: for every file that matches any of the needles
@@ -117,7 +125,7 @@ class Stem(Filter):
         ie the stem of `foobar.tar.gz` is `foobar`
 
         Args:
-            files (Iterable[Path]): list of files to check against
+            files (Iterable[Path]): input Iterable of files to filter
 
         Yields:
             Path: for every file that matches any of the needles
@@ -130,7 +138,7 @@ class Name(Filter):
         """Filters by name
 
         Args:
-            files (Iterable[Path]): list of files to check against
+            files (Iterable[Path]): input Iterable of files to filter
 
         Yields:
             Path: for every file that matches any of the needles
@@ -138,4 +146,25 @@ class Name(Filter):
         yield from self.match_files(files, 'name')
 
 def Passthrough(data: Iterable[Any]) -> Iterable[Any]:
+    """No-op, yields everything from the input Iterable
+
+    Args:
+        files (Iterable[Any]): any Iterable
+
+    Yields:
+        Path: for every file that matches any of the needles
+    """
     yield from data
+
+def Nothing(data: Iterable[Any]) -> Iterable[Any]:
+    """Consumes the input iterable but does not yield anything
+
+    Args:
+        files (Iterable[Any]): any Iterable
+
+    Yields:
+        Nothing whatsoever.
+    """
+    list(data) # Consume the Iterable
+    return
+    yield

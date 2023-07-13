@@ -33,12 +33,6 @@ class Empty(Ingest):
                                 file)
 
 
-class Nothing(Ingest):
-    def ingest(self, files: Iterable[Path]) -> Iterable[tuple[Path, Any]]:
-        return
-        # sourcery skip: remove-unreachable-code; pylint: disable=unreachable
-        yield  # type: ignore [unreachable]
-
 
 class Raw(Ingest):
     def ingest(self, files: Iterable[Path]) -> Iterable[tuple[Path, bytes]]:
