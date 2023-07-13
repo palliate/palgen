@@ -21,7 +21,7 @@ def test_resolve_module():
 
     import palgen.interfaces.module
     module, name = get_import_name(palgen.interfaces.module)
-    assert module == ['palgen', 'module']
+    assert module == ['palgen', 'interfaces', 'module']
     assert name is None
 
 
@@ -34,31 +34,31 @@ def test_resolve_builtin():
 def test_resolve_bare():
     import palgen.interfaces.module
     module, name = get_import_name(palgen.interfaces.module.Module)
-    assert module == ['palgen', 'module']
+    assert module == ['palgen', 'interfaces', 'module']
     assert name == 'Module'
 
 
 def test_resolve_from():
     from palgen.interfaces.module import Module
     module_name, name = get_import_name(Module)
-    assert module_name == ['palgen', 'module']
+    assert module_name == ['palgen', 'interfaces', 'module']
     assert name == 'Module'
 
     from palgen.interfaces import module
     module_name, name = get_import_name(module.Module)
-    assert module_name == ['palgen', 'module']
+    assert module_name == ['palgen', 'interfaces', 'module']
     assert name == 'Module'
 
 
 def test_resolve_alias():
     from palgen.interfaces.module import Module as templ
     module_name, name = get_import_name(templ)
-    assert module_name == ['palgen', 'module']
+    assert module_name == ['palgen', 'interfaces', 'module']
     assert name == 'Module'
 
     from palgen.interfaces import module as mod
     module_name, name = get_import_name(mod.Module)
-    assert module_name == ['palgen', 'module']
+    assert module_name == ['palgen', 'interfaces', 'module']
     assert name == 'Module'
 
 
@@ -75,14 +75,18 @@ def test_import_relative():
 
 
 @pytest.mark.parametrize('import_,symbol', [
-    ('from palgen import module',             'module.Module'),
-    ('from palgen.module import Module',      'Module'),
-    ('from palgen import module as t',        't.Module'),
-    ('from palgen.module import Module as t', 't'),
-    ('import palgen',                         'palgen.module.Module'),
-    ('import palgen.module',                  'palgen.module.Module'),
-    ('import palgen.module as t',             't.Module'),
-    ('import palgen as p',                    'p.module.Module')
+    ('from palgen import interfaces',                    'interfaces.module.Module'),
+    ('from palgen.interfaces import module',             'module.Module'),
+    ('from palgen.interfaces.module import Module',      'Module'),
+    ('from palgen import interfaces as i',               'i.module.Module'),
+    ('from palgen.interfaces import module as t',        't.Module'),
+    ('from palgen.interfaces.module import Module as t', 't'),
+    ('import palgen',                                    'palgen.interfaces.module.Module'),
+    ('import palgen.interfaces',                         'palgen.interfaces.module.Module'),
+    ('import palgen.interfaces.module',                  'palgen.interfaces.module.Module'),
+    ('import palgen.interfaces as i',                    'i.module.Module'),
+    ('import palgen.interfaces.module as t',             't.Module'),
+    ('import palgen as p',                               'p.interfaces.module.Module')
 ])
 class TestParametrized:
 
