@@ -21,8 +21,8 @@ def jobs(max_jobs: int):
 
 
 class Module:
-    Settings: Type[Model] = Model # Schema for module configuration
-    Schema: Optional[Type[Model]] # Optional schema to be used to validate each ingested item.
+    Settings: Type[Model] = Model        # Schema for module configuration
+    Schema: Optional[Type[Model]] = None # Optional schema to be used to validate each ingested item.
 
     name: str               # Module name. Defaults to lowercase class name
     private: bool           # Whether this module is local to this project.
@@ -63,11 +63,18 @@ class Module:
         Yields:
             tuple[Path, BaseModel | Any]: Input file path and validated :code:`Schema` object
         """
-        yield from data
+        if self.Schema is not None:
+            for path, value in data:
+                try:
+                    yield path, self.Schema.parse_obj(value)
+                except ValidationError as ex:
+                    _logger.warning("%s failed verification.", path)
+                    _print_validationerror(ex)
+        else:
+            yield from data
 
     def render(self, data: Iterable[tuple[Path, Model | Any]]) -> Iterable[tuple[Path, str | bytes]]:
         """Intended to render the output content.
-
         By default cancels the pipeline at this point.
 
         Args:
@@ -84,7 +91,7 @@ class Module:
 
         return
         # sourcery skip: remove-unreachable-code; pylint: disable=unreachable
-        yield Path(), ""  # type: ignore [unreachable]
+        yield from data  # type: ignore [unreachable]
 
     def write(self, output: Iterable[tuple[Path, str | bytes]]) -> Iterable[Path]:
         """Write the rendered files back to disk.
@@ -145,7 +152,7 @@ Private:     {cls.private}
 Description: {cls.__doc__ or ""}
 
 Options:     {cls.Settings}
-Schema:      {cls.Schema}
+Schema:      {cls.Schema or ""}
 
 Pipeline(s): {cls.pipeline}"""
 
@@ -249,7 +256,7 @@ Pipeline(s): {cls.pipeline}"""
         _check_schema_attribute(cls, "Schema")
 
 def _check_schema_attribute(cls: type, name: str):
-    if hasattr(cls, name) and (schema := getattr(cls, name)):
+    if hasattr(cls, name) and (schema := getattr(cls, name)) is not None:
         assert isinstance(schema, type), \
             f"Schema {name} of class `{cls.__name__}` is not a type."
         assert issubclass(schema, Model), \

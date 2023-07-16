@@ -6,9 +6,9 @@
 #define f
 
 int main() {
-    puts(fR"""(Project info:
+    puts(fR"(Project info:
         Name:        {project_info.name}
-        Version:     {project_info.version})""");
+        Version:     {project_info.version})");
     puts(f"\
         Description: {project_info.description}");
 }

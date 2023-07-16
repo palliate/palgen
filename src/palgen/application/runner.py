@@ -2,7 +2,6 @@ import contextlib
 import importlib
 import itertools
 import logging
-from multiprocessing import Process
 import os
 import sys
 from functools import cached_property
@@ -238,10 +237,10 @@ def check_direct_run():
             else:
                 args = [modules[0].name.lower(), *args]
 
-        if '--jobs' not in args and '-j' not in args:
-            args = ['--jobs', '1', *args]
+        #if '--jobs' not in args and '-j' not in args:
+        #    #args = ['--jobs', '1', *args]
 
-        #main(args=args)
-        proc = Process(target=main, args=[args])
-        proc.run()
-        proc.join()
+        main(args=args)
+        #proc = Process(target=main, args=[args])
+        #proc.run()
+        #proc.join()

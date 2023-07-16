@@ -47,13 +47,15 @@ def walk(path: Path, ignores: PathSpec = PathSpec([]), jobs: Optional[int] = Non
     """
     tasks, output = _walk_worker((path, ignores))
     if jobs == 1:
+        #workaround
         while tasks:
-            _tasks = []
-            for task in tasks:
+            _tasks = tasks.copy()
+            tasks = []
+            for task in _tasks:
                 new_tasks, new_output = _walk_worker(task)
-                _tasks.extend(new_tasks)
+                tasks.extend(new_tasks)
                 output.extend(new_output)
-            tasks = _tasks
+
         return output
 
     with Pool(processes=jobs) as pool:
@@ -61,7 +63,7 @@ def walk(path: Path, ignores: PathSpec = PathSpec([]), jobs: Optional[int] = Non
         # - gitignore sometimes seems to be disregarded when running multiple jobs
         # - running with multiple jobs hangs if module is ran directly
         while tasks:
-            ret = pool.map(_walk_worker, tasks)
+            ret = pool.imap_unordered(_walk_worker, tasks.copy())
             tasks = []
             for new_tasks, new_output in ret:
                 tasks.extend(new_tasks)
@@ -107,7 +109,7 @@ def find_backwards(filename: str, source_dir: Optional[Path] = None) -> Path:
 def _walk_worker(args: tuple[Path, PathSpec]):
     path, ignores = args
     if not path.is_dir():
-        raise NotADirectoryError(f"{path} is not a directory.")
+        _logger.warning("%s is not a directory.", path)
 
     if ignores.match_file(path):
         return [], []
