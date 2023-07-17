@@ -6,37 +6,37 @@ from typing import Any, Iterable, Optional, Type
 from pydantic import BaseModel as Model
 from pydantic import ValidationError
 
-from ..ingest import Extension, Name, Nothing, Toml
-from ..machinery import setattr_default
-from ..machinery import Pipeline as Sources
+from .ingest import Suffix, Name, Nothing, Toml
+from .machinery import setattr_default
+from .machinery import Pipeline as Sources
 
 _logger = logging.getLogger(__name__)
 
 
-def jobs(max_jobs: int):
+def max_jobs(amount: int):
     def wrapper(fnc):
-        fnc.max_jobs = max_jobs
+        fnc.max_jobs = amount
         return fnc
     return wrapper
 
 
-class Module:
-    Settings: Type[Model] = Model        # Schema for module configuration
+class Extension:
+    Settings: Type[Model] = Model        # Schema for extension configuration
     Schema: Optional[Type[Model]] = None # Optional schema to be used to validate each ingested item.
 
-    name: str               # Module name. Defaults to lowercase class name
-    private: bool           # Whether this module is local to this project.
+    name: str               # Extension name. Defaults to lowercase class name
+    private: bool           # Whether this extension is local to this project.
                             # Setting this to true mangles the import name
-    template: Optional[str] # Optional module template name to fetch defaults from
+    template: Optional[str] # Optional extension template name to fetch defaults from
 
     # pipelines
     ingest: Sources | dict[str, Sources]   # Pipeline used to select and read input files
-    pipeline: Sources | dict[str, Sources] # Overall module pipeline.
+    pipeline: Sources | dict[str, Sources] # Overall extension pipeline.
                                            # Override this if you want to disable all default steps
 
     # set by the loader
     module: str # full module name
-    path: Path  # path to the concrete module
+    path: Path  # path to this module
 
     def transform(self, data: Iterable[tuple[Path, Any]]) -> Iterable[tuple[Path, Any]]:
         """This step is intended to transform input data to something
@@ -53,7 +53,7 @@ class Module:
         yield from data
 
     def validate(self, data: Iterable[tuple[Path, Any]]) -> Iterable[tuple[Path, Any]]:
-        """Intended to validate elements in the :code:`data` Iterable against the pydantic schema :code:`Schema` of this module.
+        """Intended to validate elements in the :code:`data` Iterable against the pydantic schema :code:`Schema` of this extension.
 
         By default does nothing.
 
@@ -105,18 +105,19 @@ class Module:
         for filename, generated in output:
             filename = self.out_path / filename
             filename.parent.mkdir(parents=True, exist_ok=True)
-            with open(filename, "w+", encoding="utf8") as file:
+            with open(filename, "wb+" if isinstance(generated, bytes) else "w+",
+                      encoding="utf8") as file:
                 file.write(generated)
 
             _logger.debug("Generated `%s`", filename)
             yield filename
 
     def run(self, files: list[Path], jobs: Optional[int] = None) -> list[Path]:
-        """Runs the module's pipeline.
+        """Runs the extension's pipeline.
         If the pipeline is a dictionary, it will loop through each item and run
         the associated pipeline. Otherwise, it will run the single pipeline.
 
-        This method may be overridden for modules that do not wish to use the
+        This method may be overridden for extensions that do not wish to use the
         default pipelines at all or need to do custom pipeline preprocessing.
 
         Args:
@@ -135,7 +136,7 @@ class Module:
         else:
             output = self.pipeline(files, obj=self, max_jobs=jobs)
 
-        _logger.info("Module `%s` yielded %s file%s",
+        _logger.info("Extension `%s` yielded %s file%s",
                     self.name,
                     len(output),
                     's' if len(output) > 1 else '')
@@ -160,23 +161,23 @@ Pipeline(s): {cls.pipeline}"""
         return self.to_string()
 
     def __init__(self, root_path: Path, out_path: Path, settings: Optional[dict[str, Any]] = None):
-        """Module constructor. If settings are provided they are checked against the :code:`Settings` schema.
+        """Extension constructor. If settings are provided they are checked against the :code:`Settings` schema.
 
         It's not recommended to override this unless you want to disable settings validation.
 
         Args:
             root_path (Path):                              Path to the project's root folder
             out_path (Path):                               Output path
-            settings (Optional[dict[str, Any]], optional): Module settings. Defaults to None.
+            settings (Optional[dict[str, Any]], optional): Extension settings. Defaults to None.
 
         Raises:
             SystemExit: If settings are provided but fail to validate
         """
         self.root = root_path
         self.out_path = out_path
-
+        self.settings: Optional[Any]
         if settings is None:
-            return
+            raise RuntimeError(f"No settings found for extension {self.name}")
 
         try:
             self.settings = self.Settings(**settings)
@@ -192,7 +193,7 @@ Pipeline(s): {cls.pipeline}"""
     def __init_subclass__(cls, *,
                           name: Optional[str] = None,
                           private: bool = False) -> None:
-        """This class method is used to preprocess subclasses of the `Module` interface.
+        """This class method is used to preprocess subclasses of the :code:`Extension` interface.
 
 
         It sets the following attributes on the subclass:
@@ -202,12 +203,12 @@ Pipeline(s): {cls.pipeline}"""
             name (str):        Name of the subclass. If no name is provided,
                                the name of the class converted to lowercase is used.
             private (bool):    Indicates whether the subclass should be private or not.
-            ingest (Pipeline): Defaults :code:`ingest` to ingest toml files matching the module name.
+            ingest (Pipeline): Defaults :code:`ingest` to ingest toml files matching the extension name.
                                Use :code:`ingest = None` if you want to disable ingest.
 
         Args:
-            name (Optional[str], optional): Overrides the module name. Defaults to None.
-            private (bool, optional):       Sets this module as private. Defaults to False.
+            name (Optional[str], optional): Overrides the extension name. Defaults to None.
+            private (bool, optional):       Sets this extension as private. Defaults to False.
 
         Raises:
             RuntimeError: Throws RuntimeError if an invalid ingest pipeline has been given.
@@ -218,7 +219,7 @@ Pipeline(s): {cls.pipeline}"""
         setattr_default(cls, "name", name or cls.__name__.lower())
         setattr_default(cls, "private", private)
 
-        setattr_default(cls, "ingest", Sources() >> Extension('toml')
+        setattr_default(cls, "ingest", Sources() >> Suffix('toml')
                                                  >> Name(getattr(cls, "name"))
                                                  >> Toml)
         assert hasattr(cls, "ingest")
@@ -270,4 +271,4 @@ def _print_validationerror(exception: ValidationError):
         _logger.warning("    %s (type=%s)", error["msg"], error["type"])
 
 
-__all__ = ['Model', 'Module', 'Sources']
+__all__ = ['Model', 'Extension', 'Sources']

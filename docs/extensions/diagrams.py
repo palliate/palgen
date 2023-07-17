@@ -7,9 +7,9 @@ from typing import Iterable
 from pylint.pyreverse.main import Run
 import pydot
 
-from palgen.ingest.filter import Extension, Folder
+from palgen.ingest.filter import Suffix, Folder
 from palgen.ingest.path import Relative, Absolute
-from palgen.interfaces.module import Module, Sources, jobs
+from palgen.ext import Extension, Sources, max_jobs
 from palgen.loaders.ast_helper import AST
 
 def run_pyreverse(cwd: Path, args):
@@ -17,7 +17,7 @@ def run_pyreverse(cwd: Path, args):
     os.chdir(cwd)
     Run(args)
 
-class Diagrams(Module):
+class Diagrams(Extension):
     """ Generate pretty diagrams using pyreverse.
     This is internal to palgen, you can find its implementation in docs/modules
     """
@@ -27,12 +27,12 @@ class Diagrams(Module):
             with contextlib.suppress(Exception):
                 yield AST.load(file)
 
-    ingest = Sources >> Relative >> Folder('src') >> Extension('.py') >> Absolute >> get_ast
+    ingest = Sources >> Relative >> Folder('src') >> Suffix('.py') >> Absolute >> get_ast
 
     def validate(self, data):
         yield from data
 
-    @jobs(1)
+    @max_jobs(1)
     def transform(self, data: list[AST]):
         classes: list[str] = []
         for ast in data:

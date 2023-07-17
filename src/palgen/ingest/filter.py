@@ -106,7 +106,7 @@ class Folder(Filter):
             if any(self.match_str(part) for part in file.parts):
                 yield file
 
-class Extension(Filter):
+class Suffix(Filter):
     def filter(self, files: Iterable[Path]) -> Iterable[Path]:
         """Filters by name
 

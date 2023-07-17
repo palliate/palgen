@@ -1,15 +1,11 @@
 import logging
 
-from palgen.ingest.filter import Name
-from palgen.ingest.loader import Empty
-from palgen.ingest.path import Relative
-
+from palgen.ext import Extension, Sources
+from palgen.ingest import Name, Empty, Relative
 from palgen.schemas import ProjectSettings
-from palgen.interfaces import Module, Sources
 from palgen.integrations.jinja2 import Template
 
-
-class Project(Module):
+class Project(Extension):
     ingest = Sources >> Name("info.target") >> Relative >> Empty
     Settings = ProjectSettings
 

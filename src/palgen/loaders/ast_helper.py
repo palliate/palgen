@@ -212,6 +212,7 @@ class AST:
             str: for every possible symbol referring to the target type
         """
         module, name = get_import_name(base)
+
         assert name, f"Target has no name {base}"
 
         if not module:
@@ -221,6 +222,7 @@ class AST:
 
         for import_ in self.imports:
             assert import_.module is not None, f"Import has no module: {str(import_)}"
+            idx = 0
             for idx, (import_part, search_part) in enumerate(zip(import_.module, module)):
                 if import_part != search_part:
                     break
@@ -228,21 +230,25 @@ class AST:
                 idx += 1
                 if idx != len(import_.module):
                     continue
-
                 remainder = module[idx:]
-                if import_.real_name:
-                    if remainder and remainder[0] == import_.real_name:
-                        # from foo import module
-                        del remainder[0]
-                elif not import_.alias:
-                    # no name means module import => prepend module if not aliased
-                    remainder = import_.module + remainder
 
-                if import_.real_name != name:
-                    # from foo import class
-                    remainder.append(name)
+                if not import_.real_name:
+                    # import package (as alias)
+                    # import package.module (as alias)
+                    yield '.'.join([*([import_.alias] if import_.alias else import_.module),
+                                    *remainder,
+                                    name])
+                    continue
 
-                yield '.'.join([import_.name, *remainder] if import_.name else remainder)
+                assert import_.name is not None, f"Could not parse import `{import_}`"
+
+                if remainder and import_.real_name == remainder[0]:
+                    # from package import module (as alias)
+                    yield '.'.join([import_.name, name])
+
+                elif import_.real_name == name:
+                    # from package.module import Class (as alias)
+                    yield import_.name
 
     def get_subclasses(self, base: type) -> Iterable['Class']:
         """Gets all subclasses of given base type.
@@ -254,7 +260,6 @@ class AST:
             Class: Every subclass of `base`.
         """
         names = list(self.possible_names(base))
-
         for class_ in self.classes:
             for name in names:
                 if name not in class_.bases:
@@ -292,6 +297,9 @@ class Import:
             ret += f"import {'.'.join(self.module)}"
 
         return f"{ret} as {self.alias}" if self.alias else ret
+
+    def __repr__(self) -> str:
+        return f"Import({self._name}, {self.module}, {self.alias})"
 
 
 class Class:
@@ -373,7 +381,6 @@ def get_import_name(import_: type | ModuleType) -> tuple[list[str], Optional[str
     Returns:
         tuple[list[str], Optional[str]]: Package and module
     """
-    # TODO use __qualname__ (dotted full name)
     if isinstance(import_, type):
         if import_.__module__ == 'builtins':
             return [], import_.__name__

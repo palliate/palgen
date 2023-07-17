@@ -102,7 +102,7 @@ def extract_help(hint) -> str:
     return next((hint for hint in args if isinstance(hint, str)), "")
 
 def pydantic_to_click(cls: type) -> Iterable[tuple[str, dict[str, Any]]]:
-    """Converts a module's Settings schema to click arguments.
+    """Converts a extension's Settings schema to click arguments.
 
     To make an argument optional annotated with a union of the desired type and :code:`None`
     or utilize :code:`typing.Optional`.

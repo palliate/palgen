@@ -5,4 +5,4 @@ Usage
    :maxdepth: 4
 
    quickstart
-   modules
+   extensions

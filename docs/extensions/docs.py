@@ -1,12 +1,11 @@
-import os
 import logging
 from pathlib import Path
 from sphinx.cmd.build import build_main
 
-from palgen.interfaces.module import Module
+from palgen.ext import Extension
 
 
-class Docs(Module):
+class Docs(Extension):
     """ Build documentation using sphinx.
     This is internal to palgen, you can find its implementation in docs/modules
     """

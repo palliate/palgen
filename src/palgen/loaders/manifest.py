@@ -20,7 +20,7 @@ class ManifestSchema(BaseModel):
 class Manifest(Loader):
     __slots__ = ['python_loader']
     def __init__(self) -> None:
-        """Loads palgen modules from manifest files (palgen.manifest).
+        """Loads palgen extensions from manifest files (palgen.manifest).
         """
 
         self.python_loader = Python()
@@ -32,7 +32,7 @@ class Manifest(Loader):
             sources (Iterable[Path]): An iterable of paths to input files
 
         Yields:
-            tuple[str, Type[Module]]: name and class of all discovered palgen modules
+            tuple[str, Type[Extension]]: name and class of all discovered palgen extensions
         """
 
         for source in sources:
@@ -45,13 +45,13 @@ class Manifest(Loader):
                 yield from self.load(Path(path))
 
     def load(self, path: Path) -> LoaderGenerator:
-        """Attempt loading palgen modules from manifest at the given path.
+        """Attempt loading palgen extensions from manifest at the given path.
 
         Args:
             path (Path): Path to the manifest
 
         Yields:
-            tuple[str, Type[Module]]: name and class of all discovered palgen modules
+            tuple[str, Type[Extension]]: name and class of all discovered palgen extensions
         """
         if not path.exists():
             _logger.warning("Could not find %s", path)

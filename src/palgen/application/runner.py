@@ -3,6 +3,7 @@ import importlib
 import itertools
 import logging
 import os
+from subprocess import check_call
 import sys
 from functools import cached_property
 from pathlib import Path
@@ -14,7 +15,7 @@ from pydantic import BaseModel, ValidationError, validate_model
 from pydantic.errors import MissingError
 
 from ..loaders import Python, AST
-from ..interfaces.module import Module
+from ..ext import Extension
 from ..machinery import find_backwards
 from .palgen import Palgen
 
@@ -47,7 +48,7 @@ class CommandLoader(click.Group):
 
         if ctx.obj:
             assert isinstance(ctx.obj, Palgen)
-            commands.extend(ctx.obj.modules.runnables)
+            commands.extend(ctx.obj.extensions.runnables)
 
         return commands
 
@@ -63,21 +64,21 @@ class CommandLoader(click.Group):
             return self.builtins[cmd_name]
 
         assert isinstance(ctx.obj, Palgen)
-        if cmd_name in ctx.obj.modules.runnables:
-            module = ctx.obj.modules.runnables[cmd_name]
-            if hasattr(module, "cli"):
-                return module.cli
+        if cmd_name in ctx.obj.extensions.runnables:
+            extension = ctx.obj.extensions.runnables[cmd_name]
+            if hasattr(extension, "cli"):
+                return extension.cli
             else:
-                return CommandLoader.generate_cli(module, ctx.obj)
+                return CommandLoader.generate_cli(extension, ctx.obj)
 
         return None
 
     @staticmethod
-    def generate_cli(module: Type[Module], palgen: Palgen):
-        key = module.name.lower()
+    def generate_cli(extension: Type[Extension], palgen: Palgen):
+        key = extension.name.lower()
 
         @click.command(name=key,
-                       help=module.__doc__,
+                       help=extension.__doc__,
                        context_settings={'show_default': True})
         @click.pass_obj
         def wrapper(obj, **kwargs):
@@ -85,15 +86,15 @@ class CommandLoader(click.Group):
             obj.run(key, kwargs)
 
         if key in palgen.settings:
-            assert issubclass(module.Settings, BaseModel)
-            *_, errors = validate_model(module.Settings, palgen.settings[key])
+            assert issubclass(extension.Settings, BaseModel)
+            *_, errors = validate_model(extension.Settings, palgen.settings[key])
             if errors:
                 unfiltered = [error for error in errors.raw_errors
                               if not isinstance(error.exc, MissingError)]
                 if unfiltered:
-                    raise ValidationError(unfiltered, module.Settings)
+                    raise ValidationError(unfiltered, extension.Settings)
 
-        for field, options in pydantic_to_click(module.Settings):
+        for field, options in pydantic_to_click(extension.Settings):
             if key in palgen.settings and field in palgen.settings[key]:
                 options["required"] = False
                 options["default"] = palgen.settings[key][field]
@@ -169,10 +170,10 @@ def main(ctx, debug: bool, version: bool, config: Path, extra_folders: ListParam
         ctx.obj.options.jobs = jobs
 
     if extra_folders:
-        ctx.obj.options.modules.folders.extend(extra_folders)
+        ctx.obj.options.extensions.folders.extend(extra_folders)
 
     if dependencies:
-        ctx.obj.options.modules.dependencies = dependencies
+        ctx.obj.options.extensions.dependencies = dependencies
 
     if ctx.invoked_subcommand is None:
         assert isinstance(ctx.obj, Palgen)
@@ -181,33 +182,10 @@ def main(ctx, debug: bool, version: bool, config: Path, extra_folders: ListParam
         ctx.obj.run_all()
 
 
-def run_directly(module_path: Path):
-    set_min_level(0)
-
-    # find palgen.toml
-    config = find_backwards("palgen.toml", source_dir=module_path.parent)
-
-    obj = Palgen(config)
-
-    # TODO investigate why running with more than one job does not work in this mode
-    obj.options.jobs = 1
-
-    # load file to inspect modules
-    (name, module), *rest = list(Python(obj.project).load(module_path))
-    if len(rest) > 1:
-        _logger.warning("Found multiple modules: %s", rest)
-        _logger.warning("Cannot run directly, aborting.")
-        sys.exit(0)
-
-    assert isinstance(name, str)
-    assert issubclass(module, Module)
-
-    command = getattr(module, 'cli', CommandLoader.generate_cli(module, obj))
-    print("Executing")
-    command(obj=obj)
-
-# This hack allows running modules directly
 def check_direct_run():
+    """This hack allows running extensions directly
+    """
+
     import __main__
     if not (importer := getattr(__main__, '__file__', None)):
         return
@@ -215,32 +193,32 @@ def check_direct_run():
     importer = Path(importer)
     if importer.suffix == '.py' and Python.check_candidate(importer):
         # when palgen is run directly the suffix will never be '.py'
-        # however if you run a module directly it'll correspond to the module's file
-        # ie `python test.py` => -module = 'test.py'
+        # however if you run an extension directly it'll correspond to the extension's file
+        # ie `python test.py` => 'test.py'
 
-        #run_directly(importer)
         ast = AST.load(importer)
-        modules = list(ast.get_subclasses(Module))
+        extensions = list(ast.get_subclasses(Extension))
         args = sys.argv[1:]
 
         if '--debug' in args:
-            # early check for :code:`--debug` flag
-            # by the time the module gets loaded we will otherwise have already
+            # early check for `--debug` flag
+            # by the time the extension gets loaded we will otherwise have already
             # missed debug messages during loading
             set_min_level(0)
             args.remove('--debug')
 
 
-        if all(module.name.lower() not in args for module in modules):
-            if len(modules) > 1:
-                ... # TODO print help, prompt module name
+        if all(extension.name.lower() not in args for extension in extensions):
+            if len(extensions) > 1:
+                return # TODO print help, prompt extension name
             else:
-                args = [modules[0].name.lower(), *args]
+                args = [extensions[0].name.lower(), *args]
 
+        # TODO investigate why running directly with >1 jobs hangs
         #if '--jobs' not in args and '-j' not in args:
-        #    #args = ['--jobs', '1', *args]
+        #    args = ['--jobs', '1', *args]
+        #main(args=args)
 
-        main(args=args)
-        #proc = Process(target=main, args=[args])
-        #proc.run()
-        #proc.join()
+        #! workaround
+        check_call(["palgen", *args],
+                   cwd=find_backwards("palgen.toml", source_dir=importer.parent))

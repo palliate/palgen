@@ -20,7 +20,7 @@ def dependency_manifest(dependencies: ConanFileDependencies, output: Path | str)
 
             for name, path_str in manifest.items():
                 if name in amalgamated:
-                    logging.warning("Duplicate module `%s`. Skipping.", name)
+                    logging.warning("Duplicate extension `%s`. Skipping.", name)
                     continue
 
                 path = Path(path_str)

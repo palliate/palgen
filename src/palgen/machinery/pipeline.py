@@ -54,7 +54,7 @@ class Pipeline(metaclass=PipelineMeta):
         self.initial_state: Optional[Iterable] = state
         self.tasks: list[Task] = [Task()]
 
-    def __rshift__(self, step: Step | type) -> 'Pipeline':
+    def __rshift__(self, step: Step | type | Any) -> 'Pipeline':
         if isinstance(step, type):
             try:
                 step = step()

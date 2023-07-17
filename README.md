@@ -8,12 +8,12 @@ Palgen is a powerful and modular command line tool aiming to simplify writing va
 
 ## Features
 
-- Modular architecture. Once your user provided class inherits from palgen's `Module` interface it will be recoginized as module and become runnable.
+- Easily extendible. Once your user provided class inherits from palgen's `Extension` interface it will be recoginized as extension and become runnable.
 - Automatic generation of command line interfaces.
-- Configuration settings validation using pydantic.
-- Easy integration with existing Python projects.
+- Settings validation using pydantic.
+- Easy migration from existing Python projects.
 - Easy-to-use ingest pipelines for processing data.
-- Automatic parallelization of Module pipelines unless disabled.
+- Automatic parallelization of extension pipelines unless disabled.
 - Comprehensive documentation available at [palgen.palliate.io](https://palgen.palliate.io).
 
 ## Installation
@@ -32,7 +32,7 @@ The detailed documentation for palgen can be found at [palgen.palliate.io](https
 
 Check out the [examples](https://github.com/palliate/palgen/tree/master/examples) subfolder in the repository for various usage examples for palgen.
 
-Palgen itself uses palgen to generate parts of its documentation. You can check out those more complex modules in the [docs/modules](https://github.com/palliate/palgen/tree/master/docs/modules) subfolder. Since this project is part of the [palliate](https://palliate.io) project you may find additional usage examples in the other repositories within the [palliate organization](https://github.com/palliate).
+Palgen itself uses palgen to generate parts of its documentation. You can check out those more complex extensions in the [docs/modules](https://github.com/palliate/palgen/tree/master/docs/modules) subfolder. Since this project is part of the [palliate](https://palliate.io) project you may find additional usage examples in the other repositories within the [palliate organization](https://github.com/palliate).
 
 ## Contributing
 

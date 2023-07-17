@@ -1,10 +1,10 @@
 from pathlib import Path
 from typing import Iterable
 
-from palgen.ingest.filter import Extension, Stem, Pattern
+from palgen.ingest.filter import Suffix, Stem, Pattern
 from palgen.ingest.loader import Json
 
-from palgen.interfaces.module import Module, Sources, Model, jobs
+from palgen.ext import Extension, Sources, Model, max_jobs
 from palgen.integrations.jinja2.template import Template
 
 
@@ -19,25 +19,25 @@ class TestResult(Model):
     packages: list[str]
     maxpkglen: int
 
-class Tox(Module):
+class Tox(Extension):
     """ Generate pretty test reports from tox and pytest output.
     This is internal to palgen, you can find its implementation in docs/modules
     """
 
     ingest: dict[str, Sources] = {
-        'tox': Sources >> Extension('.json')
+        'tox': Sources >> Suffix('.json')
                        >> Stem('*-tox', unix=True)
                        >> Pattern('*/test/*', unix=True)
                        >> Json,
 
-        'test': Sources >> Extension('.xml')
+        'test': Sources >> Suffix('.xml')
                         >> Pattern('*/test/*', unix=True)
     }
 
     def validate(self, data):
         yield from data
 
-    @jobs(1)
+    @max_jobs(1)
     def render_tox(self, data: list):
         out_path = self.root / 'docs' / 'test'
         environments = []

@@ -1,7 +1,7 @@
 [palgen]
 output = "build"
 
-[palgen.modules]
+[palgen.extensions]
 folders = ["docs"]
 inline = false
 

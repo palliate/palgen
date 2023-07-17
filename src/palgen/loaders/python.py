@@ -6,9 +6,9 @@ from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from typing import Iterable, Optional
 
-from ..ingest import Extension
+from ..ingest import Suffix
 from ..schemas import ProjectSettings
-from ..interfaces import Module
+from ..ext import Extension
 
 from .ast_helper import AST
 from .loader import Loader, LoaderGenerator
@@ -18,35 +18,35 @@ _logger = logging.getLogger(__name__)
 
 class Python(Loader):
     def __init__(self, project: Optional[ProjectSettings] = None):
-        """Loads palgen modules from Python modules (that is, files).
+        """Loads palgen extensions from Python modules (that is, files).
 
         Args:
-            project (Optional[ProjectSettings], optional): Project settings used to give modules a proper import name. Defaults to None.
+            project (Optional[ProjectSettings], optional): Project settings used to give extensions a proper import name. Defaults to None.
         """
         self.project = project
 
     def ingest(self, sources: Iterable[Path]) -> LoaderGenerator:
-        """Ingests modules from the given sources. This skips all files not ending in '.py'.
+        """Ingests extensions from the given sources. This skips all files not ending in '.py'.
 
         Args:
             sources (Iterable[Path]): An iterable of paths to input files
 
         Yields:
-            tuple[str, Type[Module]]: name and class of all discovered palgen modules
+            tuple[str, Type[Extension]]: name and class of all discovered palgen extensions
         """
-        files = Extension('.py')(sources)
+        files = Suffix('.py')(sources)
         for file in files:
             yield from self.load(file)
 
     def load(self, path: Path, import_name: Optional[str] = None) -> LoaderGenerator:
-        """Attempt loading palgen modules from Python module at the given path.
+        """Attempt loading palgen extensions from Python module at the given path.
 
         Args:
             path (Path): Path to the Python module
             import_name (Optional[str], optional): Qualified name to use for the Python module. Defaults to None.
 
         Yields:
-            tuple[str, Type[Module]]: name and class of all discovered palgen modules
+            tuple[str, Type[Extension]]: name and class of all discovered palgen extensions
         """
         if not Python.check_candidate(path):
             return
@@ -74,23 +74,23 @@ class Python(Loader):
         else:
             for attr_name in dir(module):
                 if attr_name.startswith('_'):
-                    # ignore "private" modules
+                    # ignore "private" extensions
                     continue
 
                 attr = getattr(module, attr_name)
-                if not isinstance(attr, type) or not issubclass(attr, Module) or attr is Module:
+                if not isinstance(attr, type) or not issubclass(attr, Extension) or attr is Extension:
                     continue
 
                 attr.module = name
-                _logger.debug("Found module `%s` (importable from `%s`). Key `%s`",
+                _logger.debug("Found extension `%s` (importable from `%s`). Key `%s`",
                             attr.__name__, name, attr.name)
 
                 yield attr.name, attr
 
     @staticmethod
     def check_candidate(path: Path) -> bool:
-        """Analyzes the AST of the Python module at the given path without executing it.
-        If the AST does not contain any valid subclasses of palgen.module.Module the
+        """Analyzes the AST of the Python extension at the given path without executing it.
+        If the AST does not contain any valid subclasses of palgen.ext.Extension the
         Python module will not be deemed a valid candidate for further processing.
 
         Args:
@@ -104,7 +104,7 @@ class Python(Loader):
 
         try:
             ast = AST.load(path)
-            if not any(ast.get_subclasses(Module)):
+            if not any(ast.get_subclasses(Extension)):
                 return False
 
         except UnicodeDecodeError:

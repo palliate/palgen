@@ -21,7 +21,7 @@ def manifest(ctx, output: Path, relative: bool):
         output /= 'palgen.manifest'
     output.parent.mkdir(exist_ok=True)
 
-    generated = ctx.obj.modules.manifest(output.parent.absolute()
+    generated = ctx.obj.extensions.manifest(output.parent.absolute()
                                          if relative else None)
 
     with open(output, 'w', encoding="utf-8") as file:

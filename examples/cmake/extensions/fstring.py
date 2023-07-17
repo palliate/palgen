@@ -2,12 +2,12 @@ import re
 from pathlib import Path
 from typing import Iterable
 
-from palgen.ingest import Extension, Text, Relative
-from palgen.interfaces import Module, Sources
+from palgen.ingest import Suffix, Text, Relative
+from palgen.ext import Extension, Sources
 
 
-class FString(Module):
-    ingest = Sources >> Extension(".cpp", ".c", ".hpp", ".h") >> Relative >> Text
+class FString(Extension):
+    ingest = Sources >> Suffix(".cpp", ".c", ".hpp", ".h") >> Relative >> Text
 
     string_pattern = re.compile(r"(?P<prefix>(u|U|u8|L)?f?(u|U|u8|L)?)"
                                 r"((R\"(?P<delimiter>.*)\((?P<raw>(\n|.)*?)\)\6\")|"

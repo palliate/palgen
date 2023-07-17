@@ -1,9 +1,10 @@
 import logging
+from typing import Optional
 
-from palgen.interfaces.module import Module, Model
+from palgen.ext import Extension, Model
 
-# module class must inherit from palgen.module.Module
-class HelloWorld(Module):
+# module class must inherit from palgen.ext.Extension
+class HelloWorld(Extension):
     ''' Prints hello world '''
     # a docstring can be used to provide a help text
 
@@ -16,8 +17,8 @@ class HelloWorld(Module):
         enabled: bool = True
 
     # since we do not use data pipelines in this simple command line tool
-    # we instead override `Module.run(...)` directly
-    def run(self, data: list) -> list:
+    # we instead override `Extensiom.run(...)` directly
+    def run(self, files: list, jobs: Optional[int] = None) -> list:
         # this module's settings can be accessed using self.settings
         if self.settings.enabled:
             # `logging` should be prefered over `print` for consistency

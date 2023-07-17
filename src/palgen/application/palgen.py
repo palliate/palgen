@@ -5,7 +5,7 @@ from typing import Iterable, Optional, Type
 
 import toml
 
-from ..interfaces import Module
+from ..ext import Extension
 from ..loaders.manifest import Manifest, Python
 from ..schemas import PalgenSettings, ProjectSettings, RootSettings
 
@@ -13,66 +13,66 @@ from ..machinery.filesystem import discover, gitignore
 
 _logger = logging.getLogger(__name__)
 
-class Modules:
+class Extensions:
     __slots__ = ['private', 'public', 'inherited']
 
     def __init__(self) -> None:
-        self.private: dict[str, Type[Module]] = {}
-        self.public: dict[str, Type[Module]] = {}
-        self.inherited: dict[str, Type[Module]] = {}
+        self.private: dict[str, Type[Extension]] = {}
+        self.public: dict[str, Type[Extension]] = {}
+        self.inherited: dict[str, Type[Extension]] = {}
 
 
-    def extend(self, modules: Iterable[tuple[str, Type[Module]]]):
-        for name, module in modules:
-            target = self.private if module.private else self.public
-            self.append_checked(target, name, module)
+    def extend(self, extensions: Iterable[tuple[str, Type[Extension]]]):
+        for name, extension in extensions:
+            target = self.private if extension.private else self.public
+            self.append_checked(target, name, extension)
 
-    def append_checked(self, target: dict[str, Type[Module]], name: str, module: Type[Module]):
+    def append_checked(self, target: dict[str, Type[Extension]], name: str, extension: Type[Extension]):
         if name in target:
             other = target[name]
-            _logger.warning("Module name collision: %s defined in files %s and %s. "
+            _logger.warning("Extension name collision: %s defined in files %s and %s. "
                            "Ignoring the latter.",
                            name,
                            other.path,
-                           module.path)
+                           extension.path)
             return
 
-        target[name] = module
+        target[name] = extension
 
     @property
-    def runnables(self) -> dict[str, Type[Module]]:
-        """Returns all runnable modules.
-        Runnable modules are all private and public modules, including inherited ones.
+    def runnables(self) -> dict[str, Type[Extension]]:
+        """Returns all runnable extensions.
+        Runnable extensions are all private and public extensions, including inherited ones.
 
         Returns:
-            dict[str, Type[Module]]: Runnable modules
+            dict[str, Type[Extension]]: Runnable extensions
         """
         return self.public | self.private | self.inherited
 
     @property
-    def exportables(self) -> dict[str, Type[Module]]:
-        """Returns all exportable modules.
-        Exportable modules are all public modules. Private and inherited ones are not exportable.
+    def exportables(self) -> dict[str, Type[Extension]]:
+        """Returns all exportable extensions.
+        Exportable extensions are all public extensions. Private and inherited ones are not exportable.
 
         Returns:
-            dict[str, Type[Module]]: Runnable modules
+            dict[str, Type[Extension]]: Exportable extensions
         """
         return self.public
 
     def manifest(self, relative_to: Optional[Path] = None) -> str:
-        """Returns exportable modules and their file paths as TOML-formatted string.
+        """Returns exportable extensions and their file paths as TOML-formatted string.
 
         Returns:
-            str: TOML representation of exportable modules.
+            str: TOML representation of exportable extensions.
         """
         output = {}
-        for module in self.exportables.values():
-            path = module.path
+        for extension in self.exportables.values():
+            path = extension.path
 
             if relative_to and path.is_relative_to(relative_to):
                 path = path.relative_to(relative_to)
 
-            output[module.module] = str(path)
+            output[extension.module] = str(path)
 
         return toml.dumps(output)
 
@@ -106,9 +106,9 @@ class Palgen:
         if self.project.sources:
             self.project.sources = self._expand_paths(self.project.sources)
 
-        if self.options.modules.folders:
-            self.options.modules.folders = self._expand_paths(
-                self.options.modules.folders)
+        if self.options.extensions.folders:
+            self.options.extensions.folders = self._expand_paths(
+                self.options.extensions.folders)
 
         self.output = self._path_for(self.options.output) \
             if self.options.output else self.root
@@ -131,59 +131,58 @@ class Palgen:
         return files
 
     @cached_property
-    def modules(self) -> Modules:
-        """ Discovered modules.
+    def extensions(self) -> Extensions:
+        """ Discovered extensions.
 
-        First access to this can be slow, since it has to actually load the modules.
+        First access to this can be slow, since it has to actually load the extensions.
         """
-        modules = Modules()
-        module_paths = discover(
-            self.options.modules.folders, gitignore(self.root), jobs=1)
+        _extensions = Extensions()
+        extension_paths = discover(self.options.extensions.folders, gitignore(self.root), jobs=1)
 
-        module_settings = self.options.modules
+        extension_settings = self.options.extensions
 
-        if module_settings.inherit:
+        if extension_settings.inherit:
             manifest_loader = Manifest()
-            _logger.debug("Loading manifests")
-            for name, module in manifest_loader.ingest(module_paths):
-                modules.append_checked(modules.inherited, name, module)
+            _logger.debug("Loading from manifests")
+            for name, extension in manifest_loader.ingest(extension_paths):
+                _extensions.append_checked(_extensions.inherited, name, extension)
 
-            for name, module in manifest_loader.ingest(module_settings.dependencies):
-                modules.append_checked(modules.inherited, name, module)
+            for name, extension in manifest_loader.ingest(extension_settings.dependencies):
+                _extensions.append_checked(_extensions.inherited, name, extension)
 
-        if module_settings.python:
+        if extension_settings.python:
             python_loader = Python(project=self.project)
-            _logger.debug("Loading Python modules")
-            modules.extend(python_loader.ingest(module_paths))
+            _logger.debug("Loading from Python modules")
+            _extensions.extend(python_loader.ingest(extension_paths))
 
-            if module_settings.inline:
-                modules.extend(python_loader.ingest(self.files))
+            if extension_settings.inline:
+                _extensions.extend(python_loader.ingest(self.files))
 
-        return modules
+        return _extensions
 
     def run(self, name: str, settings: dict) -> list[Path]:
-        """Runs the specified module with the given settings.
+        """Runs the specified extension with the given settings.
 
         Args:
-            name (str): The name of the module to run.
-            settings (dict): A dictionary of settings to use when running the module.
+            name (str): The name of the extension to run.
+            settings (dict): A dictionary of settings to use when running the extension.
 
         Raises:
-            SystemExit: Terminates if running the module threw any uncaught exceptions.
+            SystemExit: Terminates if running the extension threw any uncaught exceptions.
 
         Returns:
-            list[Path]: Files generated by the module.
+            list[Path]: Files generated by the extension.
         """
-        if name not in self.modules.runnables:
-            _logger.warning("Module `%s` not found.", name)
+        if name not in self.extensions.runnables:
+            _logger.warning("Extension `%s` not found.", name)
             return []
 
-        module = self.modules.runnables[name](self.root, self.output, settings)
-        _logger.info("Running module `%s` with %d jobs",
-                     module.name, self.options.jobs or 1)
+        extension = self.extensions.runnables[name](self.root, self.output, settings)
+        _logger.info("Running extension `%s` with %d jobs",
+                     extension.name, self.options.jobs or 1)
 
         try:
-            return module.run(self.files, self.options.jobs or 1)
+            return extension.run(self.files, self.options.jobs or 1)
         except Exception as exception:
             _logger.exception("Running failed: %s: %s",
                               type(exception).__name__, exception)
@@ -192,17 +191,17 @@ class Palgen:
             raise SystemExit(1) from exception
 
     def run_all(self) -> None:
-        """Runs all modules enabled in the settings.
+        """Runs all extensions enabled in the settings.
 
-        This method will try running all modules enabled in the `palgen.toml` settings file.
-        If a module is not found or isn't runnable it will be skipped.
+        This method will try running all extensions enabled in the `palgen.toml` settings file.
+        If a extension is not found or isn't runnable it will be skipped.
         """
         generated: list[Path] = []
         for name, settings in self.settings.items():
 
-            if name not in self.modules.runnables:
+            if name not in self.extensions.runnables:
                 if name not in ('palgen', 'project'):
-                    _logger.warning("Module `%s` not found.", name)
+                    _logger.warning("Extension `%s` not found.", name)
                 continue
 
             generated.extend(self.run(name, settings))

@@ -19,9 +19,9 @@ def test_resolve_module():
     assert module == ['palgen']
     assert name is None
 
-    import palgen.interfaces.module
-    module, name = get_import_name(palgen.interfaces.module)
-    assert module == ['palgen', 'interfaces', 'module']
+    import palgen.ext
+    module, name = get_import_name(palgen.ext)
+    assert module == ['palgen', 'ext']
     assert name is None
 
 
@@ -32,34 +32,34 @@ def test_resolve_builtin():
 
 
 def test_resolve_bare():
-    import palgen.interfaces.module
-    module, name = get_import_name(palgen.interfaces.module.Module)
-    assert module == ['palgen', 'interfaces', 'module']
-    assert name == 'Module'
+    import palgen.ext
+    module, name = get_import_name(palgen.ext.Extension)
+    assert module == ['palgen', 'ext']
+    assert name == 'Extension'
 
 
 def test_resolve_from():
-    from palgen.interfaces.module import Module
-    module_name, name = get_import_name(Module)
-    assert module_name == ['palgen', 'interfaces', 'module']
-    assert name == 'Module'
+    from palgen.ext import Extension
+    module_name, name = get_import_name(Extension)
+    assert module_name == ['palgen', 'ext']
+    assert name == 'Extension'
 
-    from palgen.interfaces import module
-    module_name, name = get_import_name(module.Module)
-    assert module_name == ['palgen', 'interfaces', 'module']
-    assert name == 'Module'
+    from palgen import ext
+    module_name, name = get_import_name(ext.Extension)
+    assert module_name == ['palgen', 'ext']
+    assert name == 'Extension'
 
 
 def test_resolve_alias():
-    from palgen.interfaces.module import Module as templ
+    from palgen.ext import Extension as templ
     module_name, name = get_import_name(templ)
-    assert module_name == ['palgen', 'interfaces', 'module']
-    assert name == 'Module'
+    assert module_name == ['palgen', 'ext']
+    assert name == 'Extension'
 
-    from palgen.interfaces import module as mod
-    module_name, name = get_import_name(mod.Module)
-    assert module_name == ['palgen', 'interfaces', 'module']
-    assert name == 'Module'
+    from palgen import ext as mod
+    module_name, name = get_import_name(mod.Extension)
+    assert module_name == ['palgen', 'ext']
+    assert name == 'Extension'
 
 
 def test_import_builtins():
@@ -67,7 +67,9 @@ def test_import_builtins():
     # this must succeed even for empty files
     with mock_file(""):
         ast = AST.load(MOCK_PATH)
-        #TODO
+        possible = list(ast.possible_names(str))
+        assert len(possible) == 1
+        assert possible[0] == "str"
 
 def test_import_relative():
     with mock_file("from . import foo"):
@@ -75,36 +77,33 @@ def test_import_relative():
 
 
 @pytest.mark.parametrize('import_,symbol', [
-    ('from palgen import interfaces',                    'interfaces.module.Module'),
-    ('from palgen.interfaces import module',             'module.Module'),
-    ('from palgen.interfaces.module import Module',      'Module'),
-    ('from palgen import interfaces as i',               'i.module.Module'),
-    ('from palgen.interfaces import module as t',        't.Module'),
-    ('from palgen.interfaces.module import Module as t', 't'),
-    ('import palgen',                                    'palgen.interfaces.module.Module'),
-    ('import palgen.interfaces',                         'palgen.interfaces.module.Module'),
-    ('import palgen.interfaces.module',                  'palgen.interfaces.module.Module'),
-    ('import palgen.interfaces as i',                    'i.module.Module'),
-    ('import palgen.interfaces.module as t',             't.Module'),
-    ('import palgen as p',                               'p.interfaces.module.Module')
+    ('from palgen import ext',                 'ext.Extension'),
+    ('from palgen import ext as alias',        'alias.Extension'),
+    ('from palgen.ext import Extension',          'Extension'),
+    ('from palgen.ext import Extension as alias', 'alias'),
+    ('import palgen',                          'palgen.ext.Extension'),
+    ('import palgen as alias',                 'alias.ext.Extension'),
+    ('import palgen.ext',                      'palgen.ext.Extension'),
+    ('import palgen.ext as alias',             'alias.Extension')
+
 ])
 class TestParametrized:
 
     def test_import(self, import_, symbol):
-        from palgen.interfaces.module import Module
+        from palgen.ext import Extension
         ast = AST.parse(import_)
 
         assert len(ast.imports) == 1
         assert str(ast.imports[0]) == import_
 
-        possible = list(ast.possible_names(Module))
+        possible = list(ast.possible_names(Extension))
         assert len(possible) == 1
         assert possible[0] == symbol
 
     def test_class(self, import_, symbol):
-        from palgen.interfaces.module import Module
+        from palgen.ext import Extension
         ast = AST.parse(f"{import_}\nclass Foo({symbol}):\n  ...")
-        subclasses = list(ast.get_subclasses(Module))
+        subclasses = list(ast.get_subclasses(Extension))
 
         assert len(subclasses) == 1
         assert symbol in subclasses[0].bases

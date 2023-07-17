@@ -1,8 +1,8 @@
 [palgen]
 output = "build"
 
-[palgen.modules]
-folders = ["modules"]
+[palgen.extensions]
+folders = ["extensions"]
 inline = true
 
 [project]

@@ -61,7 +61,7 @@ def walk(path: Path, ignores: PathSpec = PathSpec([]), jobs: Optional[int] = Non
     with Pool(processes=jobs) as pool:
         # TODO investigate possible bugs:
         # - gitignore sometimes seems to be disregarded when running multiple jobs
-        # - running with multiple jobs hangs if module is ran directly
+        # - running with multiple jobs hangs if extension is ran directly
         while tasks:
             ret = pool.imap_unordered(_walk_worker, tasks.copy())
             tasks = []

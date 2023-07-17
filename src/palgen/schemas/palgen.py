@@ -4,10 +4,10 @@ from pydantic import BaseModel
 from pathlib import Path
 
 
-class ModuleSettings(BaseModel):
-    # inherit modules from other projects
+class ExtensionSettings(BaseModel):
+    # inherit extensions from other projects
     inherit: bool = True
-    # extra paths to check for modules
+    # extra paths to check for extensions
     folders: list[Path] = []
     dependencies: list[Path] = []
 
@@ -19,6 +19,6 @@ class ModuleSettings(BaseModel):
     inline: bool = True
 
 class PalgenSettings(BaseModel):
-    modules: ModuleSettings = ModuleSettings()
-    jobs:    Optional[int] = os.cpu_count() or 1
-    output:  Annotated[Optional[Path], "Output folder"] = None
+    extensions: ExtensionSettings = ExtensionSettings()
+    jobs:       Optional[int] = os.cpu_count() or 1
+    output:     Annotated[Optional[Path], "Output folder"] = None
