@@ -1,6 +1,6 @@
 toml>=0.10
 jinja2~=3.1.2
-click~=8.1.4
+click~=8.1.5
 colorama~=0.4.6
 pydantic~=1.10.9
 pathspec~=0.11.1
