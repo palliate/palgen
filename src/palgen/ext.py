@@ -6,6 +6,8 @@ from typing import Any, Iterable, Optional, Type
 from pydantic import BaseModel as Model
 from pydantic import ValidationError
 
+from palgen.schemas.project import ProjectSettings
+
 from .ingest import Suffix, Name, Nothing, Toml
 from .machinery import setattr_default
 from .machinery import Pipeline as Sources
@@ -22,27 +24,30 @@ def max_jobs(amount: int):
 
 class Extension:
     Settings: Type[Model] = Model        # Schema for extension configuration
-    Schema: Optional[Type[Model]] = None # Optional schema to be used to validate each ingested item.
+    # Optional schema to be used to validate each ingested item.
+    Schema: Optional[Type[Model]] = None
 
     name: str               # Extension name. Defaults to lowercase class name
     private: bool           # Whether this extension is local to this project.
-                            # Setting this to true mangles the import name
-    template: Optional[str] # Optional extension template name to fetch defaults from
+    # Setting this to true mangles the import name
+    # Optional extension template name to fetch defaults from
+    template: Optional[str]
 
     # pipelines
-    ingest: Sources | dict[str, Sources]   # Pipeline used to select and read input files
-    pipeline: Sources | dict[str, Sources] # Overall extension pipeline.
-                                           # Override this if you want to disable all default steps
+    # Pipeline used to select and read input files
+    ingest: Sources | dict[str, Sources]
+    pipeline: Sources | dict[str, Sources]  # Overall extension pipeline.
+    # Override this if you want to disable all default steps
 
     # set by the loader
-    module: str # full module name
+    module: str  # full module name
     path: Path  # path to this module
 
     def transform(self, data: Iterable[tuple[Path, Any]]) -> Iterable[tuple[Path, Any]]:
         """This step is intended to transform input data to something
         pydantic can validate in the :code:`validate` step.
 
-        By default does nothing.
+        By default passes through whatever it received.
 
         Args:
             data (Iterable[tuple[Path, Any]]): Iterable of inputs from the :code:`ingest` pipeline
@@ -55,7 +60,7 @@ class Extension:
     def validate(self, data: Iterable[tuple[Path, Any]]) -> Iterable[tuple[Path, Any]]:
         """Intended to validate elements in the :code:`data` Iterable against the pydantic schema :code:`Schema` of this extension.
 
-        By default does nothing.
+        By default passes through whatever it received.
 
         Args:
             data (Iterable[tuple[Path, Any]]): Iterable of inputs from the :code:`transform` step
@@ -68,14 +73,15 @@ class Extension:
                 try:
                     yield path, self.Schema.parse_obj(value)
                 except ValidationError as ex:
-                    _logger.warning("%s failed verification.", path)
+                    _logger.warning("%s failed validation.", path)
                     _print_validationerror(ex)
         else:
             yield from data
 
     def render(self, data: Iterable[tuple[Path, Model | Any]]) -> Iterable[tuple[Path, str | bytes]]:
         """Intended to render the output content.
-        By default cancels the pipeline at this point.
+
+        By default yields nothing.
 
         Args:
             data (Iterable[tuple[str, Meta, BaseModel]]): Iterable of inputs from the :code:`validate` step.
@@ -106,7 +112,7 @@ class Extension:
             filename = self.out_path / filename
             filename.parent.mkdir(parents=True, exist_ok=True)
             with open(filename, "wb+" if isinstance(generated, bytes) else "w+",
-                      encoding="utf8") as file:
+                                encoding=None if isinstance(generated, bytes) else "utf8") as file:
                 file.write(generated)
 
             _logger.debug("Generated `%s`", filename)
@@ -137,9 +143,9 @@ class Extension:
             output = self.pipeline(files, obj=self, max_jobs=jobs)
 
         _logger.info("Extension `%s` yielded %s file%s",
-                    self.name,
-                    len(output),
-                    's' if len(output) > 1 else '')
+                     self.name,
+                     len(output),
+                     's' if len(output) > 1 else '')
 
         return output
 
@@ -160,7 +166,9 @@ Pipeline(s): {cls.pipeline}"""
     def __str__(self) -> str:
         return self.to_string()
 
-    def __init__(self, root_path: Path, out_path: Path, settings: Optional[dict[str, Any]] = None):
+    def __init__(self, project: ProjectSettings,
+                 root_path: Path, out_path: Path,
+                 settings: Optional[dict[str, Any]] = None):
         """Extension constructor. If settings are provided they are checked against the :code:`Settings` schema.
 
         It's not recommended to override this unless you want to disable settings validation.
@@ -173,9 +181,12 @@ Pipeline(s): {cls.pipeline}"""
         Raises:
             SystemExit: If settings are provided but fail to validate
         """
+
+        self.project = project
         self.root = root_path
         self.out_path = out_path
-        self.settings: Optional[Any]
+        self.settings: Extension.Settings
+
         if settings is None:
             raise RuntimeError(f"No settings found for extension {self.name}")
 
@@ -186,8 +197,7 @@ Pipeline(s): {cls.pipeline}"""
         except ValidationError as ex:
             _logger.warning("Failed verifying config for `%s`", self.name)
             _print_validationerror(ex)
-            # TODO rethrow ValidationError instead, make sure we terminate with retcode 1 somewhere else
-            raise SystemExit(1) from ex
+            raise
 
     @classmethod
     def __init_subclass__(cls, *,
@@ -222,8 +232,7 @@ Pipeline(s): {cls.pipeline}"""
         setattr_default(cls, "ingest", Sources() >> Suffix('toml')
                                                  >> Name(getattr(cls, "name"))
                                                  >> Toml)
-        assert hasattr(cls, "ingest")
-        ingest = getattr(cls, "ingest")
+        ingest = getattr(cls, "ingest", None)
 
         if not hasattr(cls, "pipeline"):
             match ingest:
@@ -233,10 +242,8 @@ Pipeline(s): {cls.pipeline}"""
                                                        >> cls.validate
                                                        >> cls.render
                                                        >> cls.write)
-                    logging.debug("Pipeline: \n%s", str(getattr(cls, "pipeline")))
                 case None:
                     setattr(cls, "pipeline", Sources() >> Nothing)
-                    logging.debug("Pipeline: \n%s", str(getattr(cls, "pipeline")))
                 case dict():
                     pipelines = {}
                     for key, value in ingest.items():
@@ -246,15 +253,19 @@ Pipeline(s): {cls.pipeline}"""
                             pipeline >>= getattr(cls, name, getattr(cls, fnc))
                         pipeline >>= cls.write
                         pipelines[key] = pipeline
-                    logging.debug("Pipelines: \n%s",
-                                  '\n'.join(f'    {k}: {str(v)}' for k, v in pipelines.items()))
-
                     setattr(cls, "pipeline", pipelines)
                 case _:
                     raise RuntimeError("Invalid ingest")
 
+        if isinstance(cls.pipeline, dict):
+            _logger.debug("Pipelines: \n%s", '\n'.join(f'    {k}: {str(v)}'
+                                                       for k, v in cls.pipeline.items()))
+        else:
+            _logger.debug("Pipeline: \n%s", str(cls.pipeline))
+
         _check_schema_attribute(cls, "Settings")
         _check_schema_attribute(cls, "Schema")
+
 
 def _check_schema_attribute(cls: type, name: str):
     if hasattr(cls, name) and (schema := getattr(cls, name)) is not None:
@@ -271,4 +282,4 @@ def _print_validationerror(exception: ValidationError):
         _logger.warning("    %s (type=%s)", error["msg"], error["type"])
 
 
-__all__ = ['Model', 'Extension', 'Sources']
+__all__ = ['Extension', 'Model', 'Sources', 'max_jobs']

@@ -32,3 +32,7 @@
         no-name-in-module,
         import-outside-toplevel
     """
+    max-line-length = 120
+
+[tool.autopep8]
+    max_line_length = 120

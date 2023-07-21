@@ -46,18 +46,6 @@ def walk(path: Path, ignores: PathSpec = PathSpec([]), jobs: Optional[int] = Non
         Iterable[Path]: An iterable object representing the files and folders found in the directory.
     """
     tasks, output = _walk_worker((path, ignores))
-    if jobs == 1:
-        #workaround
-        while tasks:
-            _tasks = tasks.copy()
-            tasks = []
-            for task in _tasks:
-                new_tasks, new_output = _walk_worker(task)
-                tasks.extend(new_tasks)
-                output.extend(new_output)
-
-        return output
-
     with Pool(processes=jobs) as pool:
         # TODO investigate possible bugs:
         # - gitignore sometimes seems to be disregarded when running multiple jobs

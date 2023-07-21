@@ -1,7 +1,7 @@
 import fnmatch
 import re
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Optional
 
 
 class Filter:
@@ -10,9 +10,9 @@ class Filter:
     def __init__(self, *needles: str | re.Pattern[str], regex: bool = False, unix: bool = False) -> None:
         """ Generic filter
         Args:
-            needles: list of strings or regex patterns
-            regex: if True, all needles will be interpreted as regex patterns
-            unix: if True, all needles will be interpreted as unix patterns
+            *needles (str | re.Pattern[str]): list of strings or regex patterns
+            regex (bool): if True, all needles will be interpreted as regex patterns
+            unix (bool): if True, all needles will be interpreted as unix patterns
 
         Important:
             Needles that start with `^` or end with `$` are always converted to regex patterns.
@@ -92,6 +92,7 @@ class Pattern(Filter):
         """
         super().__init__(*patterns, regex=True, unix=unix)
 
+
 class Folder(Filter):
     def filter(self, files: Iterable[Path]) -> Iterable[Path]:
         """Filters by folder name. This will match folder names at any level
@@ -106,9 +107,14 @@ class Folder(Filter):
             if any(self.match_str(part) for part in file.parts):
                 yield file
 
+
 class Suffix(Filter):
     def filter(self, files: Iterable[Path]) -> Iterable[Path]:
-        """Filters by name
+        """Filters by suffix with leading dot. Unlike Python's default behavior this
+        concatenates all suffixes.
+
+        ie while pathlib.Path.suffix for `foo.tar.gz` would only be `.gz`,
+        this will instead check against `.tar.gz`.
 
         Args:
             files (Iterable[Path]): input Iterable of files to filter
@@ -116,7 +122,46 @@ class Suffix(Filter):
         Yields:
             Path: for every file that matches any of the needles
         """
-        yield from self.match_files(files, 'suffix')
+        for file in files:
+            suffix = ''.join(file.suffixes)
+
+            if self.match_str(suffix):
+                yield file
+
+
+class Suffixes(Filter):
+    def __init__(self, *needles: str | re.Pattern[str], regex: bool = False,
+                 unix: bool = False, position: Optional[int] = None) -> None:
+        """ Multiple suffixes filter
+        Args:
+            *needles (str | re.Pattern[str]): list of strings or regex patterns
+            regex (bool): if True, all needles will be interpreted as regex patterns
+            unix (bool): if True, all needles will be interpreted as unix patterns
+            position (Optional[int]): Check against the suffix at position `position` only.
+                                      Tries all parts of the suffix if this is `None`.
+        """
+        self.position = position
+        super().__init__(*needles, regex=regex, unix=unix)
+
+    def filter(self, files: Iterable[Path]) -> Iterable[Path]:
+        """Filters by suffix
+
+        Args:
+            files (Iterable[Path]): input Iterable of files to filter
+
+        Yields:
+            Path: for every file that matches any of the needles
+        """
+        for file in files:
+            if self.position is None:
+                if any(self.match_str(part) for part in file.suffixes):
+                    yield file
+            else:
+                if len(file.suffixes) < self.position + 1:
+                    continue
+
+                if self.match_str(file.suffixes[self.position]):
+                    yield file
 
 
 class Stem(Filter):
@@ -145,6 +190,7 @@ class Name(Filter):
         """
         yield from self.match_files(files, 'name')
 
+
 def Passthrough(data: Iterable[Any]) -> Iterable[Any]:
     """No-op, yields everything from the input Iterable
 
@@ -156,6 +202,7 @@ def Passthrough(data: Iterable[Any]) -> Iterable[Any]:
     """
     yield from data
 
+
 def Nothing(data: Iterable[Any]) -> Iterable[Any]:
     """Consumes the input iterable but does not yield anything
 
@@ -165,6 +212,6 @@ def Nothing(data: Iterable[Any]) -> Iterable[Any]:
     Yields:
         Nothing whatsoever.
     """
-    list(data) # Consume the Iterable
+    list(data)  # Consume the Iterable
     return
     yield

@@ -138,7 +138,7 @@ class Python(Loader):
 
     def get_module_name(self, path: Path) -> str:
         """Gets the qualified name for the Python module found at path.
-        Falls back to a random project name (and therefore a private module)
+        Falls back to a random project name (and therefore a private extension)
         if this loader hasn't been assigned a project yet.
 
         Args:

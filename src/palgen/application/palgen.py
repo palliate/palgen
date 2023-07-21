@@ -13,6 +13,7 @@ from ..machinery.filesystem import discover, gitignore
 
 _logger = logging.getLogger(__name__)
 
+
 class Extensions:
     __slots__ = ['private', 'public', 'inherited']
 
@@ -20,7 +21,6 @@ class Extensions:
         self.private: dict[str, Type[Extension]] = {}
         self.public: dict[str, Type[Extension]] = {}
         self.inherited: dict[str, Type[Extension]] = {}
-
 
     def extend(self, extensions: Iterable[tuple[str, Type[Extension]]]):
         for name, extension in extensions:
@@ -31,10 +31,7 @@ class Extensions:
         if name in target:
             other = target[name]
             _logger.warning("Extension name collision: %s defined in files %s and %s. "
-                           "Ignoring the latter.",
-                           name,
-                           other.path,
-                           extension.path)
+                            "Ignoring the latter.", name, other.path, extension.path)
             return
 
         target[name] = extension
@@ -107,11 +104,9 @@ class Palgen:
             self.project.sources = self._expand_paths(self.project.sources)
 
         if self.options.extensions.folders:
-            self.options.extensions.folders = self._expand_paths(
-                self.options.extensions.folders)
+            self.options.extensions.folders = self._expand_paths(self.options.extensions.folders)
 
-        self.output = self._path_for(self.options.output) \
-            if self.options.output else self.root
+        self.output = self._path_for(self.options.output) if self.options.output else self.root
 
     @cached_property
     def files(self) -> list[Path]:
@@ -124,8 +119,7 @@ class Palgen:
         Returns:
             list[Path]: input files
         """
-        files: list[Path] = discover(
-            self.project.sources, gitignore(self.root), jobs=self.options.jobs)
+        files: list[Path] = discover(self.project.sources, gitignore(self.root), jobs=self.options.jobs)
         if not files:
             _logger.warning("No source files detected.")
         return files
@@ -137,7 +131,8 @@ class Palgen:
         First access to this can be slow, since it has to actually load the extensions.
         """
         _extensions = Extensions()
-        extension_paths = discover(self.options.extensions.folders, gitignore(self.root), jobs=1)
+        extension_paths = discover(
+            self.options.extensions.folders, gitignore(self.root), jobs=1)
 
         extension_settings = self.options.extensions
 
@@ -177,18 +172,17 @@ class Palgen:
             _logger.warning("Extension `%s` not found.", name)
             return []
 
-        extension = self.extensions.runnables[name](self.root, self.output, settings)
+        extension = self.extensions.runnables[name](self.project, self.root, self.output, settings)
+
         _logger.info("Running extension `%s` with %d jobs",
                      extension.name, self.options.jobs or 1)
 
         try:
             return extension.run(self.files, self.options.jobs or 1)
         except Exception as exception:
-            _logger.exception("Running failed: %s: %s",
-                              type(exception).__name__, exception)
+            _logger.exception("Running failed: %s: %s", type(exception).__name__, exception)
 
-            # TODO do not terminate using SystemExit here
-            raise SystemExit(1) from exception
+            raise
 
     def run_all(self) -> None:
         """Runs all extensions enabled in the settings.
@@ -198,13 +192,12 @@ class Palgen:
         """
         generated: list[Path] = []
         for name, settings in self.settings.items():
-
             if name not in self.extensions.runnables:
                 if name not in ('palgen', 'project'):
                     _logger.warning("Extension `%s` not found.", name)
                 continue
 
-            generated.extend(self.run(name, settings))
+            generated.extend(self.run(name, settings) or [])
 
         _logger.info("Generated %d files.", len(generated))
 

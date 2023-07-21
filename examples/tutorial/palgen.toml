@@ -1,0 +1,11 @@
+[project]
+name = "tutorial"
+version = "0.1"
+sources = ["src"]
+
+[palgen]
+output = "build"
+extensions.folders = ["extensions"]
+
+
+[embed]

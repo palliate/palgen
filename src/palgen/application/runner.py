@@ -66,10 +66,7 @@ class CommandLoader(click.Group):
         assert isinstance(ctx.obj, Palgen)
         if cmd_name in ctx.obj.extensions.runnables:
             extension = ctx.obj.extensions.runnables[cmd_name]
-            if hasattr(extension, "cli"):
-                return extension.cli
-            else:
-                return CommandLoader.generate_cli(extension, ctx.obj)
+            return getattr(extension, "cli", CommandLoader.generate_cli(extension, ctx.obj))
 
         return None
 
@@ -87,7 +84,8 @@ class CommandLoader(click.Group):
 
         if key in palgen.settings:
             assert issubclass(extension.Settings, BaseModel)
-            *_, errors = validate_model(extension.Settings, palgen.settings[key])
+            *_, errors = validate_model(extension.Settings,
+                                        palgen.settings[key])
             if errors:
                 unfiltered = [error for error in errors.raw_errors
                               if not isinstance(error.exc, MissingError)]
@@ -192,33 +190,38 @@ def check_direct_run():
 
     importer = Path(importer)
     if importer.suffix == '.py' and Python.check_candidate(importer):
-        # when palgen is run directly the suffix will never be '.py'
-        # however if you run an extension directly it'll correspond to the extension's file
-        # ie `python test.py` => 'test.py'
-
-        ast = AST.load(importer)
-        extensions = list(ast.get_subclasses(Extension))
-        args = sys.argv[1:]
-
-        if '--debug' in args:
-            # early check for `--debug` flag
-            # by the time the extension gets loaded we will otherwise have already
-            # missed debug messages during loading
-            set_min_level(0)
-            args.remove('--debug')
+        _run_directly(importer)
 
 
-        if all(extension.name.lower() not in args for extension in extensions):
-            if len(extensions) > 1:
-                return # TODO print help, prompt extension name
-            else:
-                args = [extensions[0].name.lower(), *args]
+def _run_directly(importer: Path):
+    # when palgen is run directly the suffix will never be '.py'
+    # however if you run an extension directly it'll correspond to the extension's file
+    # ie `python test.py` => 'test.py'
 
-        # TODO investigate why running directly with >1 jobs hangs
-        #if '--jobs' not in args and '-j' not in args:
-        #    args = ['--jobs', '1', *args]
-        #main(args=args)
+    ast = AST.load(importer)
+    extensions = list(ast.get_subclasses(Extension))
+    args = sys.argv[1:]
 
-        #! workaround
-        check_call(["palgen", *args],
-                   cwd=find_backwards("palgen.toml", source_dir=importer.parent))
+    if '--debug' in args:
+        # early check for `--debug` flag
+        # by the time the extension gets loaded we will otherwise have already
+        # missed debug messages during loading
+        set_min_level(0)
+        args.remove('--debug')
+
+    if all(extension.name.lower() not in args for extension in extensions):
+        if len(extensions) > 1:
+            logging.error(
+                "Module contains multiple extensions, please specify which one to run.")
+            args = ['--help']
+        else:
+            args = [extensions[0].name.lower(), *args]
+
+    # TODO investigate why running directly with >1 jobs hangs
+    # if '--jobs' not in args and '-j' not in args:
+    #    args = ['--jobs', '1', *args]
+    # main(args=args)
+
+    #! workaround
+    check_call(["palgen", *args],
+               cwd=find_backwards("palgen.toml", source_dir=importer.parent).parent)

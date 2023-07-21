@@ -4,7 +4,7 @@ from functools import partial, reduce
 from inspect import isfunction, isgenerator, ismethod, signature
 from multiprocessing import cpu_count
 from multiprocessing.pool import Pool
-from typing import Any, Callable, Generator, Iterable, Optional
+from typing import Any, Callable, Generator, Iterable, Optional, Type
 
 from .types import issubtype
 
@@ -23,7 +23,9 @@ def get_name(obj):
 
 
 class PipelineMeta(type):
-    def __rshift__(cls, step: Step):  # sourcery skip: instance-method-first-arg-name
+    def __rshift__(cls, step: Step | Type['Pipeline'] | Any) -> 'Pipeline':
+        # sourcery skip: instance-method-first-arg-name
+
         return cls().__rshift__(step)
 
 
@@ -54,7 +56,7 @@ class Pipeline(metaclass=PipelineMeta):
         self.initial_state: Optional[Iterable] = state
         self.tasks: list[Task] = [Task()]
 
-    def __rshift__(self, step: Step | type | Any) -> 'Pipeline':
+    def __rshift__(self, step: Step | Type['Pipeline'] | Any) -> 'Pipeline':
         if isinstance(step, type):
             try:
                 step = step()
@@ -90,7 +92,7 @@ class Pipeline(metaclass=PipelineMeta):
         if task is None or not initial_state:
             return []
 
-        return list(reduce(lambda state, step: self._bind_step(step, obj)(state),  # type: ignore
+        return list(reduce(lambda state, step: self._bind_step(step, obj)(state) or [],  # type: ignore
                            [initial_state, *task.steps]))
 
     def __iter__(self, state: Optional[Iterable] = None, obj: Any = None):
@@ -129,7 +131,7 @@ class Pipeline(metaclass=PipelineMeta):
     def __repr__(self):
         return f"{str(self.initial_state or '[object]')} " + \
             ' |'.join(f"{task.max_jobs or cpu_count()}>> {task}"
-                         for task in self.tasks)
+                      for task in self.tasks)
 
     __str__ = __repr__
 
