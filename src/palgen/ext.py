@@ -35,8 +35,8 @@ class Extension:
 
     # pipelines
     # Pipeline used to select and read input files
-    ingest: Sources | dict[str, Sources]
-    pipeline: Sources | dict[str, Sources]  # Overall extension pipeline.
+    ingest: Sources | dict[str, Sources] | None
+    pipeline: Sources | dict[str, Sources]  | None # Overall extension pipeline.
     # Override this if you want to disable all default steps
 
     # set by the loader
@@ -133,6 +133,7 @@ class Extension:
         Returns:
             list[Path]: Aggregated list of paths to generated files
         """
+        assert self.pipeline is not None, "No pipeline defined"
         output: list[Path] = []
 
         if isinstance(self.pipeline, dict):

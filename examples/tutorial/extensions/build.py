@@ -4,17 +4,19 @@ from subprocess import check_call
 from typing import Iterable
 
 from palgen.ext import Extension, Sources, Model
-from palgen.ingest import Suffix, Relative
+from palgen.ingest import Suffixes, Relative
 
 class Build(Extension):
     """ Very simple build system. Compiles with as many jobs as possible, links with one. """
-    ingest = Sources >> Suffix('.cpp', '.c') >> Relative
 
     class Settings(Model):
         standard: int = 20
 
     def build(self, paths: Iterable[Path]):
         for path in paths:
+            if ".in" in path.suffixes or ".tpl" in path.suffixes:
+                continue
+
             output = self.out_path / path.with_suffix('.o')
             command = ["g++", str(path), "-c",
                        f"-I{self.out_path!s}",
@@ -34,8 +36,9 @@ class Build(Extension):
         yield output
 
     def _exec(self, command, arg1, output):
-        logging.debug("Running: %s", ' '.join(command))
+        #logging.debug("Running: %s", ' '.join(command))
         check_call(command)
         logging.debug(arg1, output)
 
+    ingest = Sources >> Suffixes('.cpp', '.c') >> Relative
     pipeline = Sources >> ingest >> build >> link

@@ -1,3 +1,5 @@
+#pylint: disable=invalid-name
+
 import fnmatch
 import re
 from pathlib import Path
@@ -213,5 +215,7 @@ def Nothing(data: Iterable[Any]) -> Iterable[Any]:
         Nothing whatsoever.
     """
     list(data)  # Consume the Iterable
+
     return
-    yield
+    # sourcery skip: remove-unreachable-code; pylint: disable=unreachable
+    yield from data  # type: ignore [unreachable]

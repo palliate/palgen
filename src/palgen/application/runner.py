@@ -88,7 +88,7 @@ class CommandLoader(click.Group):
                                         palgen.settings[key])
             if errors:
                 unfiltered = [error for error in errors.raw_errors
-                              if not isinstance(error.exc, MissingError)]
+                              if not isinstance(getattr(error, 'exc', None), MissingError)]
                 if unfiltered:
                     raise ValidationError(unfiltered, extension.Settings)
 
@@ -150,7 +150,8 @@ class CommandLoader(click.Group):
 @click.option("--extra-folders", default=[], type=ListParam[Path])
 @click.option("--dependencies", default=None, type=Path)
 @click.pass_context
-def main(ctx, debug: bool, version: bool, config: Path, extra_folders: ListParam[Path], dependencies: Optional[Path], jobs: int):
+def main(ctx, debug: bool, version: bool, config: Path,
+         extra_folders: ListParam[Path], dependencies: Optional[Path], jobs: int):
     if version:
         from palgen import __version__
         print(f"palgen {__version__}")
@@ -171,7 +172,7 @@ def main(ctx, debug: bool, version: bool, config: Path, extra_folders: ListParam
         ctx.obj.options.extensions.folders.extend(extra_folders)
 
     if dependencies:
-        ctx.obj.options.extensions.dependencies = dependencies
+        ctx.obj.options.extensions.dependencies = [dependencies]
 
     if ctx.invoked_subcommand is None:
         assert isinstance(ctx.obj, Palgen)
