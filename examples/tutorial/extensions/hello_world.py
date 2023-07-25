@@ -25,7 +25,7 @@ class HelloWorld(Extension):
 
 
     # since we do not use data pipelines in this simple command line tool
-    # we instead override `Extensiom.run(...)` directly
+    # we instead override `Extension.run(...)` directly
     def run(self, files: list, jobs: Optional[int] = None) -> list:
 
         # this extension's settings can be accessed using self.settings
