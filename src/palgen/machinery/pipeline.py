@@ -23,6 +23,8 @@ def get_name(obj):
 
 
 class PipelineMeta(type):
+    __slots__ = []
+
     def __rshift__(cls, step: Step | Type['Pipeline'] | Any) -> 'Pipeline':
         # sourcery skip: instance-method-first-arg-name
 
@@ -30,7 +32,7 @@ class PipelineMeta(type):
 
 
 class Task:
-    __slots__ = ['max_jobs', 'steps']
+    __slots__ = 'max_jobs', 'steps'
 
     def __init__(self, steps: Optional[list[Step]] = None, max_jobs: int = 0):
         self.steps: list[Step] = steps or []
@@ -50,7 +52,7 @@ class Task:
 
 
 class Pipeline(metaclass=PipelineMeta):
-    __slots__ = ['initial_state', 'tasks']
+    __slots__ = 'initial_state', 'tasks'
 
     def __init__(self, state=None):
         self.initial_state: Optional[Iterable] = state

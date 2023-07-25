@@ -1,19 +1,15 @@
+import pytest
 from pathlib import Path
 
 from palgen import Palgen
 
+root = Path(__file__).parent.parent.parent / "examples" / "tutorial"
 
-def test_load():
-    root = Path(__file__).parent.parent / "mock"
 
-    project = Palgen(root / "palgen.toml")
+@pytest.mark.parametrize('path', [root / "palgen.toml",
+                                  root])
+def test_load(path: Path):
+    project = Palgen(path)
     assert project.root == root
     assert project == root / "palgen.toml"
     assert project == str(root / "palgen.toml")
-
-    project_folder = Palgen(root)
-    assert project_folder.root == root
-    assert project_folder == root / "palgen.toml"
-    assert project_folder == str(root / "palgen.toml")
-
-    assert project == project_folder

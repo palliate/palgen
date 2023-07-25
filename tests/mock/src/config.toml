@@ -1,5 +1,0 @@
-[test.root]
-name="foo"
-
-[[tests]]
-name="foo"

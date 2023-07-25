@@ -2,7 +2,7 @@
 
 import fnmatch
 import re
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import Any, Iterable, Optional
 
 
@@ -58,7 +58,7 @@ class Filter:
             Path: for every file that matches any of the needles
         """
         for file in files:
-            assert isinstance(file, Path), f"File isn't a Path object: {file}"
+            assert isinstance(file, (Path, PurePath)), f"File isn't a Path object: {file}"
             if self.match_str(str(file)
                               if attribute is None
                               else getattr(file, attribute)):

@@ -18,27 +18,24 @@ class Build(Extension):
                 continue
 
             output = self.out_path / path.with_suffix('.o')
-            command = ["g++", str(path), "-c",
+
+            check_call(["g++", str(path), "-c",
                        f"-I{self.out_path!s}",
                        f"-I{path.parent}",
                        "-o", str(output),
-                       f"-std=c++{self.settings.standard}"]
+                       f"-std=c++{self.settings.standard}"])
+            logging.info("Compiled %s", output)
 
-            self._exec(command, "Compiled %s", output)
             yield str(output)
 
     #@max_jobs(1) # note that this is not needed, since `paths` is annotated with `list[...]`
     def link(self, paths: list[str]):
         output = self.out_path / self.project.name
-        command = ["g++", *paths, "-o", str(output)]
 
-        self._exec(command, "Linked %s", output)
+        check_call(["g++", *paths, "-o", str(output)])
+        logging.info("Linking %s", output)
+
         yield output
-
-    def _exec(self, command, arg1, output):
-        #logging.debug("Running: %s", ' '.join(command))
-        check_call(command)
-        logging.debug(arg1, output)
 
     ingest = Sources >> Suffixes('.cpp', '.c') >> Relative
     pipeline = Sources >> ingest >> build >> link
