@@ -26,7 +26,7 @@ runs:
   - name: Install palgen
     shell: bash
     run: |
-      pip install git+ssh://git@github.com/palliate/palgen.git
+      pip install git+https://github.com/palliate/palgen.git@master
   
   - name: Run palgen
     shell: bash
