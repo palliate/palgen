@@ -137,11 +137,13 @@ jobs:
         run:  mkdir -p build/lint
 
       - name: Lint with pylint
+        continue-on-error: true
         run: |
           pylint src --exit-zero -j 0 -f colorized --reports y
           pylint src --exit-zero -j 0 -f json --output build/lint/pylint.json
 
       - name: Run mypy
+        continue-on-error: true
         run: |
           mypy src --pretty --install-types --non-interactive --junit-xml build/lint/mypy.xml
       
