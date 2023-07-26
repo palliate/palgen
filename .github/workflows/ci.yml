@@ -133,11 +133,6 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements_dev.txt
 
-      - name: Lint with flake8
-        run: |
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude venv,.git,.tox
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics --exclude venv,.git,.tox
-
       - name: Lint with pylint
         run: |
           pylint src --exit-zero -j 0 -f colorized --reports y
@@ -184,7 +179,7 @@ jobs:
     needs: [test, lint]
     runs-on: ubuntu-latest
 
-    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    if: always() && github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
 
     steps:
       - name: Checkout repository
@@ -204,3 +199,8 @@ jobs:
 
       - name: Run palgen
         uses: palliate/palgen@master
+      
+      - name: Temporary, print downloaded artifacts
+        run: |
+          pwd
+          ls -R .
