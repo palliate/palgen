@@ -1,13 +1,10 @@
-# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
-
-name: Python package
+name: CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
 jobs:
   build:
@@ -15,7 +12,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
-    
+
     strategy:
       fail-fast: false
       matrix:
@@ -32,29 +29,30 @@ jobs:
         python-version: ["3.10", "3.11"]
 
     steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: true
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          submodules: true
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-        cache: 'pip'
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
 
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
-        pip install -r requirements_dev.txt
-   
-    - name: Build package
-      run: python -m build
-    
-    - name: Store package
-      uses: actions/upload-artifact@v3
-      with:
-        name: palgen_${{ github.sha }}_${{ matrix.os }}_py${{ matrix.python-version }}
-        path: dist/*
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements_dev.txt
+
+      - name: Build package
+        run: python -m build
+
+      - name: Store package
+        uses: actions/upload-artifact@v3
+        with:
+          name: palgen_${{ github.sha }}_${{ matrix.os }}_py${{ matrix.python-version }}
+          path: dist/*
 
   test:
     name: Test (python-${{ matrix.python-version }}, ${{ matrix.os }})
@@ -80,39 +78,42 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: true
-  
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-          cache: 'pip'
-  
+          cache: "pip"
+
       - name: Install dependencies
         run: |
           pip install tox tox-gh-actions
           pip install -r requirements.txt
           pip install -r requirements_dev.txt
-      
-      #- name: Download Artifacts
-      #  uses: actions/download-artifact@v3
-      #  with:
-      #    name: palgen_${{ github.sha }}_${{ matrix.os }}_py${{ matrix.python-version }}
-      #    path: dist
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: palgen_${{ github.sha }}_${{ matrix.os }}_py${{ matrix.python-version }}
+          path: dist
 
       - name: Install package
-        #run: pip install --find-links=dist palgen
-        run: pip install -e .
+        run: pip install --find-links=dist palgen
+        #run: pip install -e .
+
       - name: Test with pytest
-        run: pytest --capture=tee-sys --continue-on-collection-errors --junit-xml pytest.xml
-      
-      - name: Upload Test Results
+        run: pytest --capture=tee-sys --continue-on-collection-errors --junit-xml ${{ matrix.os }}-py${{ matrix.python-version }}.xml
+
+      - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: Test Results (Python ${{ matrix.python-version }}, ${{ matrix.os }})
-          path: pytest.xml
+          #name: Test Results (Python ${{ matrix.python-version }}, ${{ matrix.os }})
+          name: test
+          path: ${{ matrix.os }}-py${{ matrix.python-version }}.xml
+
   lint:
-    name: "Lint"
+    name: Lint
     needs: build
     runs-on: ubuntu-latest
 
@@ -121,12 +122,12 @@ jobs:
         with:
           submodules: true
 
-      - name: Set up Python 
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: 3.11
-          cache: 'pip'
-      
+          cache: "pip"
+
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
@@ -134,50 +135,72 @@ jobs:
 
       - name: Lint with flake8
         run: |
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude venv,.git,.tox
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics --exclude venv,.git,.tox
+
+      - name: Lint with pylint
+        run: |
+          pylint src --exit-zero -j 0 -f colorized --reports y
+          pylint src --exit-zero -j 0 -f json --output build/lint/pylint.json
+
+      - name: Run mypy
+        run: |
+          mypy src --pretty --install-types --non-interactive --junit-xml build/lint/mypy.xml
+      
+      - name: Upload linting results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: lint
+          path: build/lint
 
   publish-test-results:
-    name: "Publish Test Results"
+    name: Publish test results
     needs: test
     runs-on: ubuntu-latest
-    
+
     permissions:
       checks: write
       pull-requests: write
       contents: read
       issues: read
-    
+
     if: always()
 
     steps:
-      - name: Download Artifacts
+      - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
-          path: test-results
+          name: test
+          path: build/test
 
-      - name: Publish Test Results
+      - name: Publish test results
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
-          files: "test-results/**/*.xml"
-  
+          files: "build/test/*.xml"
+
   build-docs:
-    name: "Build documentation"
+    name: Build documentation
     needs: [test, lint]
     runs-on: ubuntu-latest
 
     if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
 
     steps:
-      - name: Download Artifacts
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
           path: build
-      
+
       - name: Temporary, print downloaded artifacts
         run: |
           pwd
           ls -R .
-      
+
       - name: Run palgen
-        uses: ./
+        uses: palliate/palgen@master

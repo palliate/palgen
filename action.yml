@@ -1,9 +1,14 @@
-name: "Run palgen"
+name: "Install palgen"
 
 inputs:
   conan:
     description: Install the optional conan dependency
     required: false
+
+  run:
+    description: Run palgen
+    required: false
+    default: true
 
 runs:
   using: "composite"
@@ -11,14 +16,19 @@ runs:
   - name: Setup Python
     uses: actions/setup-python@v4
     with:
-      python-version: '3.10'
+      python-version: '3.11'
   
   - name: Install Conan
     shell: bash
-    run: |
-      [[ "${{ inputs.conan }}" = true ]] && pip install conan --upgrade
+    if: inputs.conan == true
+    run: pip install conan --upgrade
 
   - name: Install palgen
     shell: bash
     run: |
       pip install git+ssh://git@github.com/palliate/palgen.git
+  
+  - name: Run palgen
+    shell: bash
+    if: inputs.run == true
+    run: palgen
