@@ -9,6 +9,11 @@ inputs:
     description: Run palgen
     required: false
     default: 'true'
+  
+  requirements:
+    description: Path to extension requirements.txt
+    required: false
+    default: ''
 
 runs:
   using: "composite"
@@ -27,7 +32,12 @@ runs:
     shell: bash
     run: |
       pip install git+https://github.com/palliate/palgen.git@master
-  
+
+  - name: Install extension dependencies
+    shell: bash
+    if: inputs.requirements != ''
+    run: pip install -r ${{ inputs.requirements }}
+
   - name: Run palgen
     shell: bash
     if: inputs.run == 'true'

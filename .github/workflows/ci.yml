@@ -193,11 +193,10 @@ jobs:
         with:
           path: build
 
-      - name: Install extension dependencies
-        run: pip install -r docs/requirements.txt
-
       - name: Run palgen
         uses: palliate/palgen@master
+        with:
+          requirements: docs/requirements.txt
 
       - name: Temporary, print directory
         run: |
