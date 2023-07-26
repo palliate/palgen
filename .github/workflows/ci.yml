@@ -56,7 +56,6 @@ jobs:
 
   test:
     name: Test (python-${{ matrix.python-version }}, ${{ matrix.os }})
-    needs: build
 
     runs-on: ${{ matrix.os }}
     strategy:
@@ -114,6 +113,31 @@ jobs:
             ${{ matrix.os }}-py${{ matrix.python-version }}.xml
             ${{ matrix.os }}-py${{ matrix.python-version }}.json
 
+  publish-test-results:
+    name: Publish test results
+    needs: test
+    runs-on: ubuntu-latest
+
+    permissions:
+      checks: write
+      pull-requests: write
+      contents: read
+      issues: read
+
+    if: always()
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: test
+          path: build/test
+
+      - name: Publish test results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: "build/test/*.xml"
+
 
   lint:
     name: Lint
@@ -151,34 +175,9 @@ jobs:
           name: lint
           path: build/lint
 
-  publish-test-results:
-    name: Publish test results
-    needs: test
-    runs-on: ubuntu-latest
-
-    permissions:
-      checks: write
-      pull-requests: write
-      contents: read
-      issues: read
-
-    if: always()
-
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: test
-          path: build/test
-
-      - name: Publish test results
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        with:
-          files: "build/test/*.xml"
-
   build-docs:
     name: Build documentation
-    needs: [test, lint]
+    needs: [build, test, lint]
     runs-on: ubuntu-latest
 
     if: always() && github.ref == 'refs/heads/master' && github.event_name != 'pull_request'

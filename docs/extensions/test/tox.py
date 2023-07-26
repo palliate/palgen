@@ -5,7 +5,7 @@ from palgen.ingest.filter import Suffix, Stem, Pattern
 from palgen.ingest.loader import Json
 
 from palgen.ext import Extension, Sources, Model, max_jobs
-from palgen.integrations.jinja2.template import Template
+from palgen.template.jinja import Template
 
 
 class TestResult(Model):
