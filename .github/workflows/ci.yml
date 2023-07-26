@@ -98,9 +98,9 @@ jobs:
           path: dist
 
       - name: Install package
-        run: pip install --find-links=dist palgen
+        run: pip install --no-index --find-links=dist palgen
         #run: pip install -e .
-
+      
       - name: Test with pytest
         run: pytest --capture=tee-sys --continue-on-collection-errors --junit-xml ${{ matrix.os }}-py${{ matrix.python-version }}.xml
 
