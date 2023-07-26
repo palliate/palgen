@@ -1,4 +1,4 @@
-autoapi.extension
+sphinx-autoapi
 furo
 sphinx-needs
 #sphinxcontrib-plantuml

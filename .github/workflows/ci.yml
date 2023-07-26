@@ -89,15 +89,15 @@ jobs:
         run: |
           pip install tox tox-gh-actions
 
-      - name: Download Artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: palgen_${{ github.sha }}_${{ matrix.os }}_py${{ matrix.python-version }}
-          path: dist
+      #- name: Download Artifacts
+      #  uses: actions/download-artifact@v3
+      #  with:
+      #    name: palgen_${{ github.sha }}_${{ matrix.os }}_py${{ matrix.python-version }}
+      #    path: dist
 
-      - name: Install package
-        run: pip install --no-index --find-links=dist palgen
-        #run: pip install -e .
+      #- name: Install package
+      #  run: pip install --no-index --find-links=dist palgen
+      #  run: pip install -e .
 
       - name: Run tox
         run: tox --result-json ${{ matrix.os }}-py${{ matrix.python-version }}.json
@@ -197,15 +197,48 @@ jobs:
       - name: Install extension dependencies
         run: pip install -r docs/requirements.txt
 
-      - name: Temporary, print downloaded artifacts
+      - name: Run palgen
+        uses: palliate/palgen@master
+
+      - name: Temporary, print directory
         run: |
           pwd
           ls -R .
 
-      - name: Run palgen
-        uses: palliate/palgen@master
-      
-      - name: Temporary, print build dir
-        run: |
-          pwd
-          ls -R build
+      - name: Upload html render
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: docs
+          path: build/html
+
+  deploy-docs:
+    name: Deploy documentation to GitHub Pages
+    needs: build-docs
+    runs-on: ubuntu-latest
+
+    if: always() && github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: build/html
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
