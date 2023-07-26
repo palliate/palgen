@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 
 import toml
-from pydantic import BaseModel
+from pydantic import RootModel
 
 from .loader import Loader, LoaderGenerator
 from .python import Python
@@ -10,11 +10,11 @@ from .python import Python
 _logger = logging.getLogger(__name__)
 
 
-class ManifestSchema(BaseModel):
-    __root__: dict[str, str]
+class ManifestSchema(RootModel):
+    root: dict[str, str]
 
     def items(self):
-        return self.__root__.items()
+        return self.root.items()
 
 
 class Manifest(Loader):

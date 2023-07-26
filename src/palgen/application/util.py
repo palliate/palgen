@@ -3,6 +3,7 @@ from types import UnionType
 from typing import Annotated, Any, Iterable, Union, get_args, get_origin, get_type_hints
 
 import click
+from pydantic_core import PydanticUndefined
 
 
 def strip_quotes(string):
@@ -122,16 +123,19 @@ def pydantic_to_click(cls: type) -> Iterable[tuple[str, dict[str, Any]]]:
     """
 
     #TODO consider moving this into `palgen.machinery`
+    if cls is None:
+        return
+
     hints = get_type_hints(cls, include_extras=True)
 
-    for key, field in getattr(cls, "__fields__").items():
+    for key, field in getattr(cls, "model_fields").items():
         assert isinstance(key, str)
-
         options = {
-            'type': field.type_,
-            'required': field.required,
+            'type': field.annotation,
+            'required': field.default is PydanticUndefined,
             'help': ""
         }
+        print(field)
 
         if hint := hints.get(key):
             if get_origin(hint) is Annotated:
@@ -159,10 +163,10 @@ def pydantic_to_click(cls: type) -> Iterable[tuple[str, dict[str, Any]]]:
                 assert len(rest) == 0
                 options['type'] = DictParam[key_t, val_t]
 
-        if not field.required:
+        if field.default is not PydanticUndefined:
             options['default'] = field.default
 
-        if options['type'] is bool:
+        if options['type'] is bool and not options['default']:
             options['is_flag'] = True
 
         yield key, options

@@ -3,7 +3,7 @@ import logging
 from palgen.ext import Extension, Sources
 from palgen.ingest import Name, Empty, Relative
 from palgen.schemas import ProjectSettings
-from palgen.integrations.jinja2 import Template
+from palgen.template.jinja import Template
 
 class Project(Extension):
     ingest = Sources >> Name("info.target") >> Relative >> Empty

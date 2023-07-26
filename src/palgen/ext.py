@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Iterable, Optional, Type
 
 from pydantic import BaseModel as Model
+from pydantic import RootModel
 from pydantic import ValidationError
 
 from palgen.schemas.project import ProjectSettings
@@ -23,7 +24,8 @@ def max_jobs(amount: int):
 
 
 class Extension:
-    Settings: Type[Model] = Model        # Schema for extension configuration
+    # Schema for extension configuration
+    Settings: Optional[Type[Model]] = None
     # Optional schema to be used to validate each ingested item.
     Schema: Optional[Type[Model]] = None
 
@@ -186,12 +188,16 @@ Pipeline(s): {cls.pipeline}"""
         self.project = project
         self.root = root_path
         self.out_path = out_path
-        self.settings: Extension.Settings
+        self.settings: Model | None = None
+
+        if self.Settings is None:
+            return
 
         if settings is None:
             raise RuntimeError(f"No settings found for extension {self.name}")
 
         try:
+            assert issubclass(self.Settings, (Model, RootModel)), "Invalid settings"
             self.settings = self.Settings(**settings)
             _logger.debug("Validated settings for %s", self.name)
 

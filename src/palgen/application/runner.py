@@ -11,8 +11,7 @@ from pkgutil import walk_packages
 from typing import Optional, Type
 
 import click
-from pydantic import BaseModel, ValidationError, validate_model
-from pydantic.errors import MissingError
+from pydantic import BaseModel, RootModel, ValidationError
 
 from ..loaders import Python, AST
 from ..ext import Extension
@@ -82,15 +81,17 @@ class CommandLoader(click.Group):
             nonlocal key
             obj.run(key, kwargs)
 
-        if key in palgen.settings:
-            assert issubclass(extension.Settings, BaseModel)
-            *_, errors = validate_model(extension.Settings,
-                                        palgen.settings[key])
-            if errors:
-                unfiltered = [error for error in errors.raw_errors
-                              if not isinstance(getattr(error, 'exc', None), MissingError)]
-                if unfiltered:
-                    raise ValidationError(unfiltered, extension.Settings)
+        if key in palgen.settings and extension.Settings is not None:
+            assert issubclass(extension.Settings, (BaseModel, RootModel))
+
+            try:
+                extension.Settings.model_validate(palgen.settings[key])
+            except ValidationError as exc:
+                filtered = [error for error in exc.errors()
+                            if error.get('type', None) != 'missing']
+
+                if filtered:
+                    raise
 
         for field, options in pydantic_to_click(extension.Settings):
             if key in palgen.settings and field in palgen.settings[key]:

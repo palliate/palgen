@@ -1,9 +1,9 @@
 from typing import Any
-from pydantic import BaseModel, root_validator
+from pydantic import RootModel, root_validator
 
 
-class RootSettings(BaseModel):
-    __root__: dict[Any, Any]
+class RootSettings(RootModel):
+    root: dict[Any, Any]
 
     @root_validator(pre=True, allow_reuse=True)
     @classmethod
@@ -18,19 +18,17 @@ class RootSettings(BaseModel):
 
         return value
 
-    # region boilerplate
     def get(self, key, default=None):
-        return self.__root__.get(key, default)
+        return self.root.get(key, default)
 
     def __iter__(self):
-        return iter(self.__root__)
+        return iter(self.root)
 
     def __getitem__(self, item):
-        return self.__root__[item]
+        return self.root[item]
 
     def keys(self):
-        return self.__root__.keys()
+        return self.root.keys()
 
     def items(self):
-        return self.__root__.items()
-    # endregion
+        return self.root.items()
