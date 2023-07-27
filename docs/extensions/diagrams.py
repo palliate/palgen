@@ -85,10 +85,9 @@ class Diagrams(Extension):
                 if (name := node.get_name()).startswith('"palgen.'):
                     # documentation links
                     attributes['xref'] = f'":py:class:`{name[1:-1]}`"'
-                else:
+                elif 'label' in attributes:
                     # remove extra data, only print name
-                    if 'label' in attributes:
-                        del attributes['label']
+                    del attributes['label']
 
                 # fix text overlapping the box
                 attributes['margin'] = '"0.2,0.1"'

@@ -11,6 +11,7 @@ class Filter:
 
     def __init__(self, *needles: str | re.Pattern[str], regex: bool = False, unix: bool = False) -> None:
         """ Generic filter
+
         Args:
             *needles (str | re.Pattern[str]): list of strings or regex patterns
             regex (bool): if True, all needles will be interpreted as regex patterns
@@ -88,6 +89,7 @@ class Filter:
 class Pattern(Filter):
     def __init__(self, *patterns: str | re.Pattern[str], unix: bool = False) -> None:
         """ Filter by regex or unix pattern. Equivalent to Filter(..., regex=True)
+
         Args:
             patterns: Iterable of strings or regex patterns
             unix: if True, all needles will be interpreted as unix patterns
@@ -135,6 +137,7 @@ class Suffixes(Filter):
     def __init__(self, *needles: str | re.Pattern[str], regex: bool = False,
                  unix: bool = False, position: Optional[int] = None) -> None:
         """ Multiple suffixes filter
+
         Args:
             *needles (str | re.Pattern[str]): list of strings or regex patterns
             regex (bool): if True, all needles will be interpreted as regex patterns

@@ -20,6 +20,5 @@ Modules
    docs/usage/index
    examples/index
    reference/index
-   docs/diagrams/index
    docs/test/index
    CONTRIBUTING.md

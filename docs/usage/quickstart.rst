@@ -80,11 +80,11 @@ Command line options and builtin commands
    :prog: palgen
    :nested: none
 
-.. click:: palgen.cli.commands.info:info
+.. click:: palgen.application.commands.info:info
    :prog: palgen info
    :nested: full
 
-.. click:: palgen.cli.commands.manifest:manifest
+.. click:: palgen.application.commands.manifest:manifest
    :prog: palgen manifest
    :nested: full
 

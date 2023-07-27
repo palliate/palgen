@@ -3,6 +3,8 @@ from pydantic import RootModel, model_validator
 
 
 class RootSettings(RootModel):
+    """ Root schema for palgen.toml """
+
     root: dict[Any, Any]
 
     @model_validator(mode='before')

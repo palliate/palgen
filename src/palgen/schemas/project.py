@@ -5,6 +5,7 @@ from pydantic import Field, BaseModel
 
 
 class ProjectSettings(BaseModel):
+    """ Basic project settings """
     name:        Annotated[str, "Project name"]
     version:     Annotated[str, Field(pattern=r"^[0-9.]+$"), "Version number"]
     description: Annotated[Optional[str], "Project description"] = ""

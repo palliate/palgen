@@ -5,6 +5,8 @@ from pathlib import Path
 
 
 class ExtensionSettings(BaseModel):
+    """ Palgen extension settings """
+
     # inherit extensions from other projects
     inherit: bool = True
     # extra paths to check for extensions
@@ -19,6 +21,8 @@ class ExtensionSettings(BaseModel):
     inline: bool = True
 
 class PalgenSettings(BaseModel):
+    """ Palgen settings """
+
     extensions: ExtensionSettings = ExtensionSettings()
     jobs:       Optional[int] = os.cpu_count() or 1
     output:     Annotated[Optional[Path], "Output folder"] = None

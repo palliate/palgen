@@ -6,10 +6,8 @@ Generated
 
 Classes
 
-.. image:: /build/diagrams/classes.svg
-   :target: ../../_images/classes.svg
+.. graphviz:: /build/diagrams/classes.dot
 
 Package collaboration
 
-.. image:: /build/diagrams/packages.svg
-   :target: ../../_images/packages.svg
+.. graphviz:: /build/diagrams/packages.dot
