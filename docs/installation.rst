@@ -9,7 +9,8 @@ Manual installation
 
 If you do not plan on editing palgen itself you can use pip to install the current development version from git.
 
-.. code-block::
+.. code-block:: bash
+
     pip install git+https://github.com/palliate/palgen.git@master
 
 You can replace :code:`master` with any branch name, including but not limited to release branches.
@@ -17,7 +18,8 @@ You can replace :code:`master` with any branch name, including but not limited t
 
 Otherwise clone the repository at an appropriate location and install palgen in editable mode. This is perfect for development since changes to palgen will manifest immediately without having to reinstall the package.
 
-.. code-block::
+.. code-block:: bash
+
     git clone https://github.com/palliate/palgen palgen
     pip install -e palgen
 

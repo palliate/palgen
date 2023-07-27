@@ -21,8 +21,11 @@ Palgen is a powerful and modular command line tool aiming to simplify writing va
 Palgen can be installed via pip:
 
 ```shell
-pip install palgen
+pip install git+https://github.com/palliate/palgen.git@master
 ```
+
+For now it is necessary to pull it from git directly. A proper release will soon follow.
+
 
 ## Documentation
 
