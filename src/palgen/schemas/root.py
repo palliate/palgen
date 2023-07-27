@@ -1,18 +1,17 @@
 from typing import Any
-from pydantic import RootModel, root_validator
+from pydantic import RootModel, model_validator
 
 
 class RootSettings(RootModel):
     root: dict[Any, Any]
 
-    @root_validator(pre=True, allow_reuse=True)
+    @model_validator(mode='before')
     @classmethod
     def validate(cls, value):
-        settings = value.get("__root__")
-        assert "project" in settings, "Missing project table."
-        settings.setdefault("palgen", {})
+        assert "project" in value, "Missing project table."
+        value.setdefault("palgen", {})
 
-        for key, setting in settings.items():
+        for key, setting in value.items():
             assert isinstance(setting, dict), \
                 f"Setting {key} is not a table."
 

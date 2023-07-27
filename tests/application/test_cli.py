@@ -12,9 +12,8 @@ class BuildTypes(Enum):
     DEBUG = 'Debug'
 
 
-class Test(BaseModel):
-    class Config:
-        arbitrary_types_allowed = True
+class DummyModel(BaseModel):
+    model_config = {'arbitrary_types_allowed': True}
 
     bar: int = 3
     foo: Annotated[int, 5] = 6
@@ -24,7 +23,7 @@ class Test(BaseModel):
 
     editable: Annotated[bool, "Install lib as editable package"] = False
     build_type: Annotated[BuildTypes, "Target build type"] = BuildTypes.RELEASE
-    oof = 3
+    oof: int = 3
 
 
 def test_pydantic_to_click():
@@ -74,7 +73,7 @@ def test_pydantic_to_click():
         }
     }
 
-    for key, options in pydantic_to_click(Test):
+    for key, options in pydantic_to_click(DummyModel):
         assert key in expected
         for option, value in options.items():
             assert option in expected[key]

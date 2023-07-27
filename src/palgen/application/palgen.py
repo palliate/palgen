@@ -94,11 +94,11 @@ class Palgen:
             raise FileNotFoundError("Config file does not exist")
 
         config = toml.load(self.config_file)
-        self.settings = RootSettings.parse_obj(config)
+        self.settings = RootSettings.model_validate(config)
         self.root = self.config_file.parent
 
-        self.project = ProjectSettings.parse_obj(self.settings['project'])
-        self.options = PalgenSettings.parse_obj(self.settings['palgen'])
+        self.project = ProjectSettings.model_validate(self.settings['project'])
+        self.options = PalgenSettings.model_validate(self.settings['palgen'])
 
         if self.project.sources:
             self.project.sources = self._expand_paths(self.project.sources)

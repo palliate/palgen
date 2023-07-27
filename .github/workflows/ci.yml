@@ -109,9 +109,7 @@ jobs:
         with:
           #name: Test Results (Python ${{ matrix.python-version }}, ${{ matrix.os }})
           name: test
-          path: |
-            build/test/${{ matrix.os }}-py${{ matrix.python-version }}.xml
-            build/test/${{ matrix.os }}-py${{ matrix.python-version }}.json
+          path: build/test
 
   publish-test-results:
     name: Publish test results
@@ -243,7 +241,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
         with:
-          path: build/html
+          path: build/docs
 
       - name: Deploy to GitHub Pages
         id: deployment
