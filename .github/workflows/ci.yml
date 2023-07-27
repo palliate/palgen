@@ -188,6 +188,9 @@ jobs:
         with:
           submodules: true
 
+      - name: Install system dependencies
+        run: sudo apt install -y graphviz
+
       - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
@@ -228,6 +231,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: build
 
       - name: Setup Pages
         uses: actions/configure-pages@v3
