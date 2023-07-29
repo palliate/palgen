@@ -84,9 +84,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
 
-      - name: Install dependencies
-        run: |
-          pip install tox tox-gh-actions
+      - name: Install tox
+        run: pip install tox tox-gh-actions
 
       #- name: Download Artifacts
       #  uses: actions/download-artifact@v3
@@ -153,6 +152,9 @@ jobs:
           python-version: 3.11
           cache: "pip"
 
+      - name: Install tox
+        run: pip install tox tox-gh-actions
+
       - name: Make output directory
         run:  mkdir -p build/lint
 
@@ -165,7 +167,7 @@ jobs:
         continue-on-error: true
         run: |
           tox -e type
-      
+
       - name: Upload linting results
         if: always()
         uses: actions/upload-artifact@v3
@@ -225,7 +227,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
