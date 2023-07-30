@@ -6,10 +6,9 @@ from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from typing import Iterable, Optional
 
+from ..ext import Extension
 from ..ingest import Suffix
 from ..schemas import ProjectSettings
-from ..ext import Extension
-
 from .ast_helper import AST
 from .loader import Loader, LoaderGenerator
 
@@ -21,7 +20,8 @@ class Python(Loader):
         """Loads palgen extensions from Python modules (that is, files).
 
         Args:
-            project (Optional[ProjectSettings], optional): Project settings used to give extensions a proper import name. Defaults to None.
+            project (Optional[ProjectSettings], optional): Project settings used to give extensions
+                a proper import name. Defaults to None.
         """
         self.project = project
 

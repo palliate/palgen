@@ -1,8 +1,7 @@
+import string
 import traceback
 from pathlib import Path
 from typing import Optional
-
-import string
 
 
 class Template(string.Template):

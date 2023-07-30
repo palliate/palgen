@@ -4,4 +4,5 @@
 from palgen import main
 
 if __name__ == "__main__":
-    main()
+    # click edits the parameters for this call, however pylint cannot possibly know about this
+    main() # pylint: disable=no-value-for-parameter

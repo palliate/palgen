@@ -1,3 +1,5 @@
+#pylint: disable=invalid-name
+
 def CompressKeys(data, namespace=None, separator='.'):
     # TODO this is remaining from the old TOML ingest - update, document and test this
     if namespace is None:

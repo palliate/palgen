@@ -3,22 +3,21 @@ import importlib
 import itertools
 import logging
 import os
-from subprocess import check_call
 import sys
 from functools import cached_property
 from pathlib import Path
 from pkgutil import walk_packages
-from typing import Optional, Type
+from subprocess import check_call
+from typing import Type
 
 import click
 from pydantic import BaseModel, RootModel, ValidationError
 
-from ..loaders import Python, AST
 from ..ext import Extension
+from ..loaders import AST, Python
 from ..machinery import find_backwards
-from .palgen import Palgen
-
 from .log import set_min_level
+from .palgen import Palgen
 from .util import ListParam, pydantic_to_click
 
 _logger = logging.getLogger(__name__)
@@ -148,11 +147,13 @@ class CommandLoader(click.Group):
 @click.option("-c", "--config",
               help="Path to project configuration.",
               default=Path.cwd() / "palgen.toml")
-@click.option("--extra-folders", default=[], type=ListParam[Path])
-@click.option("--dependencies", default=None, type=Path)
+@click.option("--extra-folders", default=[], type=ListParam[Path]())
+@click.option("--dependencies", default=[], type=ListParam[Path]())
 @click.pass_context
 def main(ctx, debug: bool, version: bool, config: Path,
-         extra_folders: ListParam[Path], dependencies: Optional[Path], jobs: int):
+         extra_folders: ListParam[Path], dependencies: ListParam[Path], jobs: int):
+    # pylint: disable=too-many-arguments
+
     if version:
         from palgen import __version__
         print(f"palgen {__version__}")
@@ -173,7 +174,7 @@ def main(ctx, debug: bool, version: bool, config: Path,
         ctx.obj.options.extensions.folders.extend(extra_folders)
 
     if dependencies:
-        ctx.obj.options.extensions.dependencies = [dependencies]
+        ctx.obj.options.extensions.dependencies = list(dependencies)
 
     if ctx.invoked_subcommand is None:
         assert isinstance(ctx.obj, Palgen)

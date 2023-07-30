@@ -6,7 +6,6 @@ import click
 
 from palgen.schemas import ProjectSettings
 
-
 _logger = logging.getLogger(__name__)
 
 

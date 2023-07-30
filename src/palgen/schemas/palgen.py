@@ -1,7 +1,8 @@
 import os
-from typing import Annotated, Optional
-from pydantic import BaseModel
 from pathlib import Path
+from typing import Annotated, Optional
+
+from pydantic import BaseModel
 
 
 class ExtensionSettings(BaseModel):

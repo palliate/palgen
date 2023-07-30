@@ -4,14 +4,13 @@ from pathlib import Path
 from typing import Any, Iterable, Optional, Type
 
 from pydantic import BaseModel as Model
-from pydantic import RootModel
-from pydantic import ValidationError
+from pydantic import RootModel, ValidationError
 
 from palgen.schemas.project import ProjectSettings
 
-from .ingest import Suffix, Name, Nothing, Toml
-from .machinery import setattr_default
+from .ingest import Name, Nothing, Suffix, Toml
 from .machinery import Pipeline as Sources
+from .machinery import setattr_default
 
 _logger = logging.getLogger(__name__)
 
@@ -60,7 +59,8 @@ class Extension:
         yield from data
 
     def validate(self, data: Iterable[tuple[Path, Any]]) -> Iterable[tuple[Path, Any]]:
-        """Intended to validate elements in the :code:`data` Iterable against the pydantic schema :code:`Schema` of this extension.
+        """Intended to validate elements in the :code:`data` Iterable against
+        the pydantic schema :code:`Schema` of this extension.
 
         By default passes through whatever it received.
 
@@ -198,7 +198,7 @@ Pipeline(s): {cls.pipeline}"""
 
         try:
             assert issubclass(self.Settings, (Model, RootModel)), "Invalid settings"
-            self.settings = self.Settings(**settings)
+            self.settings = self.Settings.model_validate(settings)
             _logger.debug("Validated settings for %s", self.name)
 
         except ValidationError as ex:

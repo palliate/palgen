@@ -6,10 +6,9 @@ from typing import Iterable, Optional, Type
 import toml
 
 from ..ext import Extension
-from ..loaders.manifest import Manifest, Python
-from ..schemas import PalgenSettings, ProjectSettings, RootSettings
-
+from ..loaders import Manifest, Python
 from ..machinery.filesystem import discover, gitignore
+from ..schemas import PalgenSettings, ProjectSettings, RootSettings
 
 _logger = logging.getLogger(__name__)
 

@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Annotated, Optional
 
-from pydantic import Field, BaseModel
+from pydantic import BaseModel, Field
 
 
 class ProjectSettings(BaseModel):

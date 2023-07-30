@@ -6,7 +6,6 @@ from typing import Optional
 from pathspec import PathSpec
 from pathspec.patterns.gitwildmatch import GitWildMatchPattern
 
-
 _logger = logging.getLogger(__name__)
 
 
@@ -34,7 +33,8 @@ def gitignore(path: Path):
 
 
 def walk(path: Path, ignores: PathSpec = PathSpec([]), jobs: Optional[int] = None) -> list[Path]:
-    """Traverse a directory tree and return a list of Path objects representing the files and folders found in the directory.
+    """Traverse a directory tree and return a list of Path objects
+    representing the files and folders found in the directory.
 
     Args:
         path (Path): Path to the directory to traverse
@@ -47,9 +47,6 @@ def walk(path: Path, ignores: PathSpec = PathSpec([]), jobs: Optional[int] = Non
     """
     tasks, output = _walk_worker((path, ignores))
     with Pool(processes=jobs) as pool:
-        # TODO investigate possible bugs:
-        # - gitignore sometimes seems to be disregarded when running multiple jobs
-        # - running with multiple jobs hangs if extension is ran directly
         while tasks:
             ret = pool.imap_unordered(_walk_worker, tasks.copy())
             tasks = []
@@ -58,27 +55,35 @@ def walk(path: Path, ignores: PathSpec = PathSpec([]), jobs: Optional[int] = Non
                 output.extend(new_output)
         return output
 
+
 def discover(paths: list[Path], ignores: Optional[PathSpec] = None, jobs: Optional[int] = None) -> list[Path]:
     """Walks through every folder in :code:`paths`, returns list of all non-ignored files and folders.
 
     Args:
         paths (list[Path]): List of paths to walk through
-        ignores (Optional[PathSpec], optional): Patterns to match files and folders which ought to be ignored. You probably want to use :code:`gitignore(...)` to get a :code:`PathSpec` object for this parameter.
-        jobs (Optional[int], optional): Amount of jobs to run this at. Defaults to None, meaning however many cpu cores the system has.
+        ignores (Optional[PathSpec], optional): Patterns to match files and folders which ought to be ignored.
+            You probably want to use :code:`gitignore(...)` to get a :code:`PathSpec` object for this parameter.
+        jobs (Optional[int], optional): Amount of jobs to run this at.
+            Defaults to None, meaning however many cpu cores the system has.
 
     Returns:
         list[Path]: _description_
     """
+    if ignores is None:
+        ignores = PathSpec([])
+
     return [element
             for path in paths
             for element in walk(path, ignores, jobs)]
+
 
 def find_backwards(filename: str, source_dir: Optional[Path] = None) -> Path:
     """Traverse up the folder hierarchy until any of the parent folders contain the file we're looking for.
 
     Args:
         filename (str): Name of the file to be found
-        source_dir (Optional[Path], optional): What folder to start searching in. Defaults to the current working directory.
+        source_dir (Optional[Path], optional): What folder to start searching in.
+            Defaults to the current working directory.
 
     Raises:
         FileNotFoundError: File wasn't found
@@ -94,7 +99,8 @@ def find_backwards(filename: str, source_dir: Optional[Path] = None) -> Path:
 
     raise FileNotFoundError(f"{filename} not found in parent directories.")
 
-def _walk_worker(args: tuple[Path, PathSpec]):
+
+def _walk_worker(args: tuple[Path, PathSpec]) -> tuple[list[tuple[Path, PathSpec]], list[Path]]:
     path, ignores = args
     if not path.is_dir():
         _logger.warning("%s is not a directory.", path)
@@ -106,8 +112,8 @@ def _walk_worker(args: tuple[Path, PathSpec]):
         ignores = PathSpec(ignores.patterns)
         ignores += gitignore(probe)
 
-    folders = []
-    entries = []
+    folders: list[tuple[Path, PathSpec]] = []
+    entries: list[Path] = []
     for entry in path.iterdir():
         if ignores.match_file(entry):
             # honor .gitignore, skip this entry

@@ -1,6 +1,6 @@
-from .runner import main, check_direct_run
-from .log import setup_logger, set_min_level
+from .log import set_min_level, setup_logger
 from .palgen import Palgen
+from .runner import check_direct_run, main
 
 __all__ = ['main', 'check_direct_run',
            'setup_logger', 'set_min_level',

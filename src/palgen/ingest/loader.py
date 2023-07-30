@@ -1,9 +1,8 @@
 import logging
-from typing import Any, Iterable
-from abc import abstractmethod
 import sys
+from abc import abstractmethod
 from pathlib import Path
-
+from typing import Any, Iterable
 
 _logger = logging.getLogger(__name__)
 
@@ -53,7 +52,6 @@ class Empty(Ingest):
                                 file)
 
 
-
 class Raw(Ingest):
     def ingest(self, files: Iterable[Path]) -> Iterable[tuple[Path, bytes]]:
         """Ingests files as raw bytes.
@@ -69,9 +67,9 @@ class Raw(Ingest):
 
 
 class Text(Ingest):
-    __slots__ = 'encoding',
+    __slots__ = ('encoding',)
 
-    def __init__(self, encoding = 'utf-8') -> None:
+    def __init__(self, encoding='utf-8') -> None:
         """Text ingest.
 
         Args:
@@ -120,7 +118,7 @@ class Toml(Ingest):
         if sys.version_info.minor >= 11:
             import tomllib as toml
         else:
-            import toml
+            import toml  # type: ignore
 
         for path in files:
             yield path, toml.loads(path.read_text())

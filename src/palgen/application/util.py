@@ -1,17 +1,16 @@
 from abc import ABC
+from collections import UserDict, UserList
 from types import UnionType
-from typing import Annotated, Any, Iterable, Union, get_args, get_origin, get_type_hints
+from typing import (Annotated, Any, Iterable, Optional, TypeVar, Union,
+                    get_args, get_origin, get_type_hints)
 
 import click
 from pydantic_core import PydanticUndefined
 
+T = TypeVar("T")
 
-def strip_quotes(string):
-    if string[0] == string[-1] and string[0] in ('\'', '\"'):
-        return string[1:-1]
-    return string
 
-class ListParam(ABC, click.ParamType):
+class ListParam(UserList[T], ABC, click.ParamType):
     """Click friendly list proxy. Can be used like a parameterized generic,
     ie ListParam[int] will check if all elements of the list are actually of type int.
     """
@@ -28,18 +27,25 @@ class ListParam(ABC, click.ParamType):
             separator = ','
 
         return [strip_quotes(val.strip())
-                if issubclass(self.inner_t, str)
-                else self.inner_t(val.strip())
+                # if issubclass(self.inner_t, str)
+                # else self.inner_t(val.strip())
                 for val in value.split(separator)]
 
-    def __class_getitem__(cls, inner_t) -> 'ListParam':
-        assert isinstance(inner_t, type)
+    @classmethod
+    def new(cls, item: T) -> type['ListParam']:
+        assert isinstance(item, type)
 
-        name = f"{getattr(cls, 'name')}[{inner_t.__name__}]"
-        return type(name, (ListParam,), {'name': name, 'inner_t': inner_t})()
+        name = f"{getattr(cls, 'name')}[{item.__name__}]"
+        return type(name, (ListParam,), {'name': name, 'inner_t': item})
+
+    __class_getitem__ = new
 
 
-class DictParam(ABC, click.ParamType):
+K = TypeVar('K')
+V = TypeVar('V')
+
+
+class DictParam(ABC, click.ParamType, UserDict[K, V]):
     """Click friendly dict proxy. Can be used like a parameterized generic.
     ie: :code:`DictParam[str, int] will check all keys for type :code:`str`
     and all values for type :code:`int`
@@ -70,16 +76,18 @@ class DictParam(ABC, click.ParamType):
 
         return ret
 
-    def __class_getitem__(cls, args):
-        assert isinstance(args, tuple)
-        assert len(args) == 2, "Dictionary needs key and value types"
+    @classmethod
+    def new(cls, *item) -> type['DictParam']:
+        assert len(item) == 2, "DictParam needs key and value types"
 
-        key_t, value_t = args
-        assert isinstance(key_t, type)
-        assert isinstance(value_t, type)
+        key, value = item
+        assert isinstance(key, type)
+        assert isinstance(value, type)
 
-        name = f"{getattr(cls, 'name')}[{key_t.__name__}, {value_t.__name__}]"
-        return type(name, (DictParam,), {'name': name, 'key_t': key_t, 'value_t': value_t})()
+        name = f"{getattr(cls, 'name')}[{key.__name__}, {value.__name__}]"
+        return type(name, (DictParam,), {'name': name, 'key_t': key, 'value_t': value})
+
+    __class_getitem__ = new
 
 
 def extract_help(hint) -> str:
@@ -102,7 +110,8 @@ def extract_help(hint) -> str:
     args = get_args(hint)
     return next((hint for hint in args if isinstance(hint, str)), "")
 
-def pydantic_to_click(cls: type) -> Iterable[tuple[str, dict[str, Any]]]:
+
+def pydantic_to_click(cls: Optional[type]) -> Iterable[tuple[str, dict[str, Any]]]:
     """Converts a extension's Settings schema to click arguments.
 
     To make an argument optional annotated with a union of the desired type and :code:`None`
@@ -113,7 +122,7 @@ def pydantic_to_click(cls: type) -> Iterable[tuple[str, dict[str, Any]]]:
     Help text is automatically extracted from attributes annotated with :code:`Annotated[..., "help text"]`
 
     Args:
-        cls (type): Setting schema
+        cls (Optional[type], optional): Setting schema. This function does nothing if cls is None
 
     Raises:
         TypeError: Invalid annotation found.
@@ -122,7 +131,6 @@ def pydantic_to_click(cls: type) -> Iterable[tuple[str, dict[str, Any]]]:
         tuple[str, dict[str, Any]]: Tuple consisting of attribute key and converted options.
     """
 
-    #TODO consider moving this into `palgen.machinery`
     if cls is None:
         return
 
@@ -156,12 +164,12 @@ def pydantic_to_click(cls: type) -> Iterable[tuple[str, dict[str, Any]]]:
             elif origin is list:
                 inner_type, *rest = get_args(options['type'])
                 assert len(rest) == 0
-                options['type'] = ListParam[inner_type]
+                options['type'] = ListParam.new(inner_type)
 
             elif origin is dict:
                 key_t, val_t, *rest = get_args(options['type'])
                 assert len(rest) == 0
-                options['type'] = DictParam[key_t, val_t]
+                options['type'] = DictParam.new(key_t, val_t)
 
         if field.default is not PydanticUndefined:
             options['default'] = field.default
@@ -170,3 +178,9 @@ def pydantic_to_click(cls: type) -> Iterable[tuple[str, dict[str, Any]]]:
             options['is_flag'] = True
 
         yield key, options
+
+
+def strip_quotes(string):
+    if string[0] == string[-1] and string[0] in ('\'', '\"'):
+        return string[1:-1]
+    return string

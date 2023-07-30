@@ -23,7 +23,7 @@ def get_name(obj):
 
 
 class PipelineMeta(type):
-    __slots__ = []
+    __slots__ = ()
 
     def __rshift__(cls, step: Step | Type['Pipeline'] | Any) -> 'Pipeline':
         # sourcery skip: instance-method-first-arg-name

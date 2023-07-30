@@ -2,7 +2,9 @@
 
 import logging
 import sys
+
 import colorama
+
 
 class LogFormatter(logging.Formatter):
     """Custom log formatter"""
@@ -69,6 +71,7 @@ def set_min_level(level: int):
         level (int): log level #TODO copy description from palliate
     """
     logging.root.setLevel((1 + level) * 10)
+
 
 def handle_exception(type_, value, trace):
     """Global exception handler.
