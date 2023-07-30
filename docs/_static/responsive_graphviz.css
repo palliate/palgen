@@ -1,3 +1,11 @@
 body {
     --md-graphviz-edge-color: var(--color-content-foreground);
 }
+
+table.need {
+    background-color: var(--color-content-background) !important;
+}
+
+table.need tr.head {
+    background-color: rgba(171, 171, 171, 0.5) !important;
+}
