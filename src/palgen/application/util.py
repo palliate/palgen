@@ -15,7 +15,7 @@ class ListParam(UserList[T], ABC, click.ParamType):
     ie ListParam[int] will check if all elements of the list are actually of type int.
     """
     name = "list"
-    inner_t: type
+    inner_t: type[T]
 
     def convert(self, value, *_):
         if isinstance(value, list):
@@ -27,12 +27,12 @@ class ListParam(UserList[T], ABC, click.ParamType):
             separator = ','
 
         return [strip_quotes(val.strip())
-                # if issubclass(self.inner_t, str)
-                # else self.inner_t(val.strip())
+                if issubclass(self.inner_t, str)
+                else self.inner_t(val.strip())
                 for val in value.split(separator)]
 
     @classmethod
-    def new(cls, item: T) -> type['ListParam']:
+    def new(cls, item: type[T]) -> type['ListParam']:
         assert isinstance(item, type)
 
         name = f"{getattr(cls, 'name')}[{item.__name__}]"
@@ -51,8 +51,8 @@ class DictParam(ABC, click.ParamType, UserDict[K, V]):
     and all values for type :code:`int`
     """
     name = "dict"
-    key_t: type
-    value_t: type
+    key_t: type[K]
+    value_t: type[V]
 
     def convert(self, value, param, ctx):
         if isinstance(value, dict):
@@ -77,17 +77,17 @@ class DictParam(ABC, click.ParamType, UserDict[K, V]):
         return ret
 
     @classmethod
-    def new(cls, *item) -> type['DictParam']:
-        assert len(item) == 2, "DictParam needs key and value types"
-
-        key, value = item
+    def new(cls, key: type[K], value: type[V]) -> type['DictParam']:
         assert isinstance(key, type)
         assert isinstance(value, type)
 
         name = f"{getattr(cls, 'name')}[{key.__name__}, {value.__name__}]"
         return type(name, (DictParam,), {'name': name, 'key_t': key, 'value_t': value})
 
-    __class_getitem__ = new
+    def __class_getitem__(cls, item: tuple[type[K], type[V]]) -> type['DictParam']:
+        assert len(item) == 2, "DictParam needs key and value types."
+
+        return cls.new(item[0], item[1])
 
 
 def extract_help(hint) -> str:
@@ -143,7 +143,6 @@ def pydantic_to_click(cls: Optional[type]) -> Iterable[tuple[str, dict[str, Any]
             'required': field.default is PydanticUndefined,
             'help': ""
         }
-        print(field)
 
         if hint := hints.get(key):
             if get_origin(hint) is Annotated:

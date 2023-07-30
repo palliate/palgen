@@ -1,5 +1,6 @@
+import abc
 from enum import Enum
-from typing import Annotated
+from typing import Annotated, MutableSequence
 import pytest
 from pydantic import BaseModel
 
@@ -75,37 +76,38 @@ def test_pydantic_to_click():
 
     for key, options in pydantic_to_click(DummyModel):
         assert key in expected
+
         for option, value in options.items():
             assert option in expected[key]
 
-            if isinstance(value, ListParam):
+            if isinstance(value, type) and issubclass(value, MutableSequence):
                 #TODO check subtype
                 assert issubtype(expected[key][option], list)
             else:
-                assert value == expected[key][option]
+                assert value == expected[key][option], value
 
 
 def test_list_param_convert():
-    assert ListParam[int].convert("1;2;3;4") == [1, 2, 3, 4]
-    assert ListParam[int].convert("[1, 2, 3, 4]") == [1, 2, 3, 4]
-    assert ListParam[str].convert("1;2;3;4") == ["1", "2", "3", "4"]
-    assert ListParam[str].convert("['1', '2', '3', '4']") == ["1", "2", "3", "4"]
+    assert ListParam[int]().convert("1;2;3;4") == [1, 2, 3, 4]
+    assert ListParam[int]().convert("[1, 2, 3, 4]") == [1, 2, 3, 4]
+    assert ListParam[str]().convert("1;2;3;4") == ["1", "2", "3", "4"]
+    assert ListParam[str]().convert("['1', '2', '3', '4']") == ["1", "2", "3", "4"]
 
 
 def test_list_param_convert_raises():
     with pytest.raises(ValueError):
-        ListParam[int].convert("1;2;3;4.5")
+        ListParam[int]().convert("1;2;3;4.5")
 
     with pytest.raises(ValueError):
-        ListParam[int].convert("[1,2,3,4.5]")
+        ListParam[int]().convert("[1,2,3,4.5]")
 
 
 def test_dict_param_type():
-    assert DictParam[int, str].convert('{1: "one", 2: "two"}',
+    assert DictParam[int, str]().convert('{1: "one", 2: "two"}',
                                        None,
                                        None) == {1: "one", 2: "two"}
 
 
 def test_dict_param_type_failure():
     with pytest.raises(ValueError):
-        DictParam[int, int].convert('{1: "one", 2: "two"}', None, None)
+        DictParam[int, int]().convert('{1: "one", 2: "two"}', None, None)
