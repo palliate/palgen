@@ -163,12 +163,12 @@ def pydantic_to_click(cls: Optional[type]) -> Iterable[tuple[str, dict[str, Any]
             elif origin is list:
                 inner_type, *rest = get_args(options['type'])
                 assert len(rest) == 0
-                options['type'] = ListParam.new(inner_type)
+                options['type'] = ListParam.new(inner_type)()
 
             elif origin is dict:
                 key_t, val_t, *rest = get_args(options['type'])
                 assert len(rest) == 0
-                options['type'] = DictParam.new(key_t, val_t)
+                options['type'] = DictParam.new(key_t, val_t)()
 
         if field.default is not PydanticUndefined:
             options['default'] = field.default

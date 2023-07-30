@@ -23,7 +23,7 @@ def manifest(ctx, output: Path, relative: bool):
     output.parent.mkdir(exist_ok=True)
 
     generated = ctx.obj.extensions.manifest(output.parent.absolute()
-                                         if relative else None)
+                                            if relative else None)
 
     with open(output, 'w', encoding="utf-8") as file:
         file.write(generated)

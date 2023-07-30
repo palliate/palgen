@@ -80,8 +80,8 @@ def test_pydantic_to_click():
         for option, value in options.items():
             assert option in expected[key]
 
-            if isinstance(value, type) and issubclass(value, MutableSequence):
-                #TODO check subtype
+            if isinstance(value, MutableSequence):
+                #TODO check subscripted type
                 assert issubtype(expected[key][option], list)
             else:
                 assert value == expected[key][option], value

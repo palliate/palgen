@@ -18,8 +18,8 @@ def run_pyreverse(cwd: Path, args):
     Run(args)
 
 class Diagrams(Extension):
-    """ Generate pretty diagrams using pyreverse.
-    This is internal to palgen, you can find its implementation in docs/modules
+    """Generate pretty diagrams using pyreverse.
+       This is internal to palgen, you can find its implementation in docs/modules
     """
 
     def get_ast(self, data):
@@ -38,7 +38,7 @@ class Diagrams(Extension):
         for ast in data:
             if not ast.path:
                 continue
-            path = ast.path.relative_to(self.root / 'src')
+            path = ast.path.relative_to(self.root_path / 'src')
             name = path.parts[:-1]
 
             if path.name != '__init__.py':
@@ -47,7 +47,7 @@ class Diagrams(Extension):
 
         #TODO get project name
         args = ['-o', 'dot',
-                str(self.root / 'src' / 'palgen')]
+                str(self.root_path / 'src' / 'palgen')]
 
         for class_ in classes:
             args.extend(('-c', class_))

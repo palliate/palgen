@@ -1,10 +1,12 @@
 import logging
+import textwrap
 import traceback
 from pathlib import Path
-from typing import Any, Iterable, Optional, Type
+from typing import Any, Iterable, Optional
 
 from pydantic import BaseModel as Model
 from pydantic import RootModel, ValidationError
+from pydantic_core import PydanticUndefined
 
 from palgen.schemas.project import ProjectSettings
 
@@ -23,26 +25,26 @@ def max_jobs(amount: int):
 
 
 class Extension:
-    # Schema for extension configuration
-    Settings: Optional[Type[Model]] = None
-    # Optional schema to be used to validate each ingested item.
-    Schema: Optional[Type[Model]] = None
+    Settings: Optional[type[Model]] = None # Schema for extension configuration
+    Schema: Optional[type[Model]] = None   # Optional schema to be used to validate each ingested item.
 
     name: str               # Extension name. Defaults to lowercase class name
+    description: str        # Description of this extension. Automatically dedented,
+                            # can be the docstring of this class.
     private: bool           # Whether this extension is local to this project.
-    # Setting this to true mangles the import name
-    # Optional extension template name to fetch defaults from
-    template: Optional[str]
+                            # Setting this to true mangles the import name
 
     # pipelines
-    # Pipeline used to select and read input files
-    ingest: Sources | dict[str, Sources] | None
+    ingest: Sources | dict[str, Sources] | None    # Pipeline used to select and read input files
     pipeline: Sources | dict[str, Sources]  | None # Overall extension pipeline.
-    # Override this if you want to disable all default steps
+                                                   # Override this if you want to disable all default steps
 
     # set by the loader
-    module: str  # full module name
-    path: Path  # path to this module
+    module: str        # full module name
+    module_path: Path  # path to this module
+
+    #__slots__ = ('name', 'description', 'private', 'ingest', 'pipeline', 'module',
+    #             'module_path', 'root_path', 'out_path', 'project', 'settings')
 
     def transform(self, data: Iterable[tuple[Path, Any]]) -> Iterable[tuple[Path, Any]]:
         """This step is intended to transform input data to something
@@ -155,16 +157,24 @@ class Extension:
     @classmethod
     def to_string(cls) -> str:
         # TODO stringify Settings and Schema properly
+        indentation = ' '*13
+
+        description = cls.description.replace('\n', f'\n{indentation}')
+
+        pipeline: str = str(cls.pipeline)
+        if isinstance(cls.pipeline , dict):
+            pipeline = f'\n{indentation}'.join(f"{key}: {value}" for key, value in cls.pipeline.items())
+
         return f"""\
 Name:        {cls.name}
-Module:      palgen.ext.{cls.module}
+Module:      {cls.module}
 Private:     {cls.private}
-Description: {cls.__doc__ or ""}
+Description: {description}
 
-Options:     {cls.Settings}
-Schema:      {cls.Schema or ""}
+Options:     {_stringify_pydantic(cls.Settings, 13) or "No options"}
+Schema:      {_stringify_pydantic(cls.Schema, 13)   or "No schema"}
 
-Pipeline(s): {cls.pipeline}"""
+Pipeline(s): {pipeline}"""
 
     def __str__(self) -> str:
         return self.to_string()
@@ -186,7 +196,7 @@ Pipeline(s): {cls.pipeline}"""
         """
 
         self.project = project
-        self.root = root_path
+        self.root_path = root_path
         self.out_path = out_path
         self.settings: Model | None = None
 
@@ -231,7 +241,7 @@ Pipeline(s): {cls.pipeline}"""
             RuntimeError: Throws RuntimeError if an invalid ingest pipeline has been given.
         """
         frame = traceback.extract_stack(limit=2)[0]
-        setattr(cls, "path", Path(frame.filename))
+        setattr(cls, "module_path", Path(frame.filename))
 
         setattr_default(cls, "name", name or cls.__name__.lower())
         setattr_default(cls, "private", private)
@@ -239,39 +249,45 @@ Pipeline(s): {cls.pipeline}"""
         setattr_default(cls, "ingest", Sources() >> Suffix('toml')
                                                  >> Name(getattr(cls, "name"))
                                                  >> Toml)
-        ingest = getattr(cls, "ingest", None)
-
-        if not hasattr(cls, "pipeline"):
-            match ingest:
-                case Sources():
-                    setattr(cls, "pipeline", Sources() >> ingest
-                                                       >> cls.transform
-                                                       >> cls.validate
-                                                       >> cls.render
-                                                       >> cls.write)
-                case None:
-                    setattr(cls, "pipeline", Sources() >> Nothing)
-                case dict():
-                    pipelines = {}
-                    for key, value in ingest.items():
-                        pipeline = Sources() >> value
-                        for fnc in 'transform', 'validate', 'render':
-                            name = f"{fnc}_{key}"
-                            pipeline >>= getattr(cls, name, getattr(cls, fnc))
-                        pipeline >>= cls.write
-                        pipelines[key] = pipeline
-                    setattr(cls, "pipeline", pipelines)
-                case _:
-                    raise RuntimeError("Invalid ingest")
+        _process_pipelines(cls)
 
         if isinstance(cls.pipeline, dict):
-            _logger.debug("Pipelines: \n%s", '\n'.join(f'    {k}: {str(v)}'
-                                                       for k, v in cls.pipeline.items()))
+            _logger.debug("Pipelines: \n%s", '\n'.join(f'    {k}: {str(v)}' for k, v in cls.pipeline.items()))
         else:
             _logger.debug("Pipeline: \n%s", str(cls.pipeline))
 
         _check_schema_attribute(cls, "Settings")
         _check_schema_attribute(cls, "Schema")
+
+        # dedent the Extension's docstring
+        _dedent_description(cls)
+
+def _process_pipelines(cls: type[Extension]):
+    if hasattr(cls, "pipeline"):
+        # pipeline has been manually overridden, do nothing
+        return
+
+    match ingest := getattr(cls, "ingest", None):
+        case Sources():
+            setattr(cls, "pipeline", Sources() >> ingest
+                                                       >> cls.transform
+                                                       >> cls.validate
+                                                       >> cls.render
+                                                       >> cls.write)
+        case None:
+            setattr(cls, "pipeline", Sources() >> Nothing)
+        case dict():
+            pipelines = {}
+            for key, value in ingest.items():
+                pipeline = Sources() >> value
+                for fnc in 'transform', 'validate', 'render':
+                    name = f"{fnc}_{key}"
+                    pipeline >>= getattr(cls, name, getattr(cls, fnc))
+                pipeline >>= cls.write
+                pipelines[key] = pipeline
+            setattr(cls, "pipeline", pipelines)
+        case _:
+            raise RuntimeError("Invalid ingest")
 
 
 def _check_schema_attribute(cls: type, name: str):
@@ -288,5 +304,41 @@ def _print_validationerror(exception: ValidationError):
             _logger.warning("  %s", loc)
         _logger.warning("    %s (type=%s)", error["msg"], error["type"])
 
+def _dedent_description(cls: type[Extension]):
+    description = (getattr(cls, "description", cls.__doc__) or "").strip()
+    starts_with_newline = description.startswith('\n')
+    description = description.strip('\n')
+
+    if starts_with_newline:
+        description = textwrap.dedent(description)
+
+    elif description.find('\n') != -1:
+        first, rest = description.split('\n', 1)
+        description = '\n'.join([first, textwrap.dedent(rest)])
+
+    setattr(cls, "description", description)
+
+def _stringify_pydantic(cls: Optional[type[Model]], indent=0) -> Optional[str]:
+    if cls is None:
+        return None
+
+    assert issubclass(cls, Model), f"Expected pydantic model, got {cls}"
+    fields = []
+    for name, options in cls.model_fields.items():
+        field = f"{name}"
+        if options.annotation is not None:
+            field += f": {options.annotation.__name__}"
+
+            if args := getattr(options.annotation, "__args__", None):
+                args = ', '.join([getattr(arg, '__name__', '')
+                                for arg in args])
+                field += f"[{args}]"
+
+        if options.default is not None and options.default is not PydanticUndefined:
+            default = f'"{options.default}"' if isinstance(options.default, str) else options.default
+            field += f" = {default}"
+        fields.append(field)
+
+    return ('\n' + ' ' * indent).join(fields)
 
 __all__ = ['Extension', 'Model', 'Sources', 'max_jobs']

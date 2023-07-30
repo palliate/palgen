@@ -39,7 +39,7 @@ class Tox(Extension):
         yield from data
 
     def render_tox(self, data: list[tuple[Path, Any]]):
-        out_path = self.root / 'docs' / 'test'
+        out_path = self.root_path / 'docs' / 'test'
 
         tox_version = None
         tests: dict[str, dict[str, TestResult]] =  defaultdict(dict)
@@ -93,7 +93,7 @@ class Tox(Extension):
         yield out_path / 'index.rst', Template('index.rst.in').render(environments=tests.keys())
 
     def render_test(self, data: Iterable[Path]):
-        out_path = self.root / 'docs' / 'test'
+        out_path = self.root_path / 'docs' / 'test'
 
         for path in data:
             yield out_path / f'{path.stem}.rst', Template('test_report.rst.in').render(target=path.stem)

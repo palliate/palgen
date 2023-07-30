@@ -14,7 +14,7 @@ def Relative(self, files: Iterable[Path]) -> Iterable[Path]:
         Path: Resulting relative paths.
     """
     for file in files:
-        yield file.relative_to(self.root)
+        yield file.relative_to(self.root_path)
 
 def Absolute(self, files: Iterable[Path]) -> Iterable[Path]:
     """Turns relative (to the project root) file paths into absolute file paths.
@@ -26,4 +26,4 @@ def Absolute(self, files: Iterable[Path]) -> Iterable[Path]:
         Path: Resulting absolute paths.
     """
     for file in files:
-        yield self.root / file
+        yield self.root_path / file

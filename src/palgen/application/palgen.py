@@ -30,7 +30,7 @@ class Extensions:
         if name in target:
             other = target[name]
             _logger.warning("Extension name collision: %s defined in files %s and %s. "
-                            "Ignoring the latter.", name, other.path, extension.path)
+                            "Ignoring the latter.", name, other.module_path, extension.module_path)
             return
 
         target[name] = extension
@@ -63,7 +63,7 @@ class Extensions:
         """
         output = {}
         for extension in self.exportables.values():
-            path = extension.path
+            path = extension.module_path
 
             if relative_to and path.is_relative_to(relative_to):
                 path = path.relative_to(relative_to)
