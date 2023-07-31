@@ -6,6 +6,8 @@ from ..ext import Extension
 
 LoaderGenerator = Generator[tuple[str, Type[Extension]], None, None]
 class Loader:
+    __slots__ = ()
+
     @abstractmethod
     def ingest(self, sources: list[Path]) -> LoaderGenerator:
         """Searches the given sources for ingestable extensions and loads them.

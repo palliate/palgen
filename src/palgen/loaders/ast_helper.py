@@ -1,11 +1,13 @@
 import ast
-from functools import singledispatchmethod
+from functools import singledispatch, singledispatchmethod
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Iterable, Optional
 
 
 class AST:
+    __slots__ = 'path', 'tree', 'constants', 'imports', 'classes'
+
     def __init__(self, tree: ast.Module):
         """Module level AST parsing utility.
         Will visit the AST and extract information automatically.
@@ -32,11 +34,11 @@ class AST:
         assert isinstance(tree, ast.Module), "Tree is not of type ast.Module"
 
         self.tree = tree
+        self.path: Optional[Path] = None
 
         self.constants: dict[str, Any] = {}
         self.imports: list[Import] = []
         self.classes: list[Class] = []
-        self.path: Optional[Path] = None
 
         self.visit(self.tree)
 
@@ -168,7 +170,7 @@ class AST:
                     stmt* body,
                     expr* decorator_list)
         """
-        self.classes.append(Class().visit(node))
+        self.classes.append(Class.parse(node))
 
     def try_constant(self, target: ast.expr, value: ast.expr):
         # `expr` can refer to a bunch of things that we cannot evaluate without executing
@@ -267,7 +269,10 @@ class AST:
 
                 yield class_
 
+
 class Import:
+    __slots__ = '_name', 'module', 'alias'
+
     def __init__(self, name: Optional[str] = None,
                  module: Optional[list[str]] = None,
                  alias: Optional[str] = None):
@@ -303,16 +308,14 @@ class Import:
 
 
 class Class:
-    def __init__(self):
-        self.name: str = ""
-        self.bases: list[str] = []
+    __slots__ = 'name', 'bases'
 
-    @singledispatchmethod
-    def visit(self, node: ast.AST):
-        pass
+    def __init__(self, name: str, bases: list[str]):
+        self.name:  str = name
+        self.bases: list[str] = bases
 
-    @visit.register
-    def visit_class(self, node: ast.ClassDef):
+    @staticmethod
+    def parse(node: ast.ClassDef) -> 'Class':
         """Visits class definition and extracts bases.
 
         .. code-block::
@@ -329,16 +332,17 @@ class Class:
         Returns:
             Class: This object with properly set bases.
         """
+        return Class(node.name, [Class.visit(base) for base in node.bases])
 
-        self.name = node.name
-
-        for base in node.bases:
-            self.bases.append(self.visit(base))
-
-        return self
+    @singledispatch
+    @staticmethod
+    def visit(node: ast.AST) -> str:
+        # pylint: disable=unused-argument
+        ...
 
     @visit.register
-    def visit_attribute(self, node: ast.Attribute) -> str:
+    @staticmethod
+    def visit_attribute(node: ast.Attribute) -> str:
         """Visits an attribute
 
         .. code-block::
@@ -350,10 +354,11 @@ class Class:
         Returns:
             str
         """
-        return '.'.join([self.visit(node.value), node.attr])
+        return '.'.join([Class.visit(node.value), node.attr])
 
     @visit.register
-    def visit_name(self, node: ast.Name) -> str:
+    @staticmethod
+    def visit_name(node: ast.Name) -> str:
         """Visits a variable name
 
         .. code-block::

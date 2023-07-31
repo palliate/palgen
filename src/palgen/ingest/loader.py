@@ -11,6 +11,8 @@ class Ingest:
     """Ingest interface.
     """
 
+    __slots__ = ()
+
     @abstractmethod
     def ingest(self, files: Iterable[Path]) -> Iterable[tuple[Path, Any]]:
         """Ingests files.
@@ -31,6 +33,8 @@ class Ingest:
 
 
 class Empty(Ingest):
+    __slots__ = ()
+
     def ingest(self, files: Iterable[Path]) -> Iterable[tuple[Path, None]]:
         """Ingests files if they are empty. Warns if a file in the :code:`files` iterable
         is not empty.
@@ -53,6 +57,8 @@ class Empty(Ingest):
 
 
 class Raw(Ingest):
+    __slots__ = ()
+
     def ingest(self, files: Iterable[Path]) -> Iterable[tuple[Path, bytes]]:
         """Ingests files as raw bytes.
 
@@ -91,6 +97,8 @@ class Text(Ingest):
 
 
 class Json(Ingest):
+    __slots__ = ()
+
     def ingest(self, files: Iterable[Path]):
         """Ingests JSON files.
 
@@ -106,6 +114,8 @@ class Json(Ingest):
 
 
 class Toml(Ingest):
+    __slots__ = ()
+
     def ingest(self, files: Iterable[Path]) -> Iterable[tuple[Path, dict[str, Any]]]:
         """Ingests TOML files. This uses Python's standard library tomllib if available.
 

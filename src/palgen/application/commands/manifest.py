@@ -3,7 +3,7 @@ from pathlib import Path
 
 import click
 
-from ..palgen import Palgen
+from ...palgen import Palgen
 
 _logger = logging.getLogger(__name__)
 

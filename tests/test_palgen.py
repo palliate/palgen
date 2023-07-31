@@ -3,11 +3,10 @@ from pathlib import Path
 
 from palgen import Palgen
 
-root = Path(__file__).parent.parent.parent / "examples" / "tutorial"
+root = Path(__file__).parent.parent / "examples" / "tutorial"
 
 
-@pytest.mark.parametrize('path', [root / "palgen.toml",
-                                  root])
+@pytest.mark.parametrize('path', [root / "palgen.toml", root])
 def test_load(path: Path):
     project = Palgen(path)
     assert project.root == root

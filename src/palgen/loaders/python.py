@@ -16,6 +16,8 @@ _logger = logging.getLogger(__name__)
 
 
 class Python(Loader):
+    __slots__ = ('project',)
+
     def __init__(self, project: Optional[ProjectSettings] = None):
         """Loads palgen extensions from Python modules (that is, files).
 

@@ -18,7 +18,8 @@ class ManifestSchema(RootModel):
 
 
 class Manifest(Loader):
-    __slots__ = ['python_loader']
+    __slots__ = ('python_loader',)
+
     def __init__(self) -> None:
         """Loads palgen extensions from manifest files (palgen.manifest).
         """
@@ -58,7 +59,7 @@ class Manifest(Loader):
             return
 
         file = toml.load(path)
-        manifest = ManifestSchema.parse_obj(file)
+        manifest = ManifestSchema.model_validate(file)
         _logger.debug("Loading from `%s`", path)
 
         for name, path_str in manifest.items():

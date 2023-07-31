@@ -8,11 +8,10 @@ from pydantic import BaseModel as Model
 from pydantic import RootModel, ValidationError
 from pydantic_core import PydanticUndefined
 
-from palgen.schemas.project import ProjectSettings
-
 from .ingest import Name, Nothing, Suffix, Toml
 from .machinery import Pipeline as Sources
 from .machinery import setattr_default
+from .schemas import ProjectSettings
 
 _logger = logging.getLogger(__name__)
 
@@ -25,26 +24,25 @@ def max_jobs(amount: int):
 
 
 class Extension:
-    Settings: Optional[type[Model]] = None # Schema for extension configuration
+    Settings: Optional[type[Model]] = None  # Schema for extension configuration
     Schema: Optional[type[Model]] = None   # Optional schema to be used to validate each ingested item.
 
     name: str               # Extension name. Defaults to lowercase class name
     description: str        # Description of this extension. Automatically dedented,
-                            # can be the docstring of this class.
+    # can be the docstring of this class.
     private: bool           # Whether this extension is local to this project.
-                            # Setting this to true mangles the import name
+    # Setting this to true mangles the import name
 
     # pipelines
     ingest: Sources | dict[str, Sources] | None    # Pipeline used to select and read input files
-    pipeline: Sources | dict[str, Sources]  | None # Overall extension pipeline.
-                                                   # Override this if you want to disable all default steps
+    pipeline: Sources | dict[str, Sources] | None  # Overall extension pipeline.
+    # Override this if you want to disable all default steps
 
     # set by the loader
     module: str        # full module name
     module_path: Path  # path to this module
 
-    #__slots__ = ('name', 'description', 'private', 'ingest', 'pipeline', 'module',
-    #             'module_path', 'root_path', 'out_path', 'project', 'settings')
+    __slots__ = ('root_path', 'out_path', 'project', 'settings')
 
     def transform(self, data: Iterable[tuple[Path, Any]]) -> Iterable[tuple[Path, Any]]:
         """This step is intended to transform input data to something
@@ -162,7 +160,7 @@ class Extension:
         description = cls.description.replace('\n', f'\n{indentation}')
 
         pipeline: str = str(cls.pipeline)
-        if isinstance(cls.pipeline , dict):
+        if isinstance(cls.pipeline, dict):
             pipeline = f'\n{indentation}'.join(f"{key}: {value}" for key, value in cls.pipeline.items())
 
         return f"""\
@@ -262,6 +260,7 @@ Pipeline(s): {pipeline}"""
         # dedent the Extension's docstring
         _dedent_description(cls)
 
+
 def _process_pipelines(cls: type[Extension]):
     if hasattr(cls, "pipeline"):
         # pipeline has been manually overridden, do nothing
@@ -270,10 +269,10 @@ def _process_pipelines(cls: type[Extension]):
     match ingest := getattr(cls, "ingest", None):
         case Sources():
             setattr(cls, "pipeline", Sources() >> ingest
-                                                       >> cls.transform
-                                                       >> cls.validate
-                                                       >> cls.render
-                                                       >> cls.write)
+                    >> cls.transform
+                    >> cls.validate
+                    >> cls.render
+                    >> cls.write)
         case None:
             setattr(cls, "pipeline", Sources() >> Nothing)
         case dict():
@@ -304,6 +303,7 @@ def _print_validationerror(exception: ValidationError):
             _logger.warning("  %s", loc)
         _logger.warning("    %s (type=%s)", error["msg"], error["type"])
 
+
 def _dedent_description(cls: type[Extension]):
     description = (getattr(cls, "description", cls.__doc__) or "").strip()
     starts_with_newline = description.startswith('\n')
@@ -318,6 +318,7 @@ def _dedent_description(cls: type[Extension]):
 
     setattr(cls, "description", description)
 
+
 def _stringify_pydantic(cls: Optional[type[Model]], indent=0) -> Optional[str]:
     if cls is None:
         return None
@@ -331,7 +332,7 @@ def _stringify_pydantic(cls: Optional[type[Model]], indent=0) -> Optional[str]:
 
             if args := getattr(options.annotation, "__args__", None):
                 args = ', '.join([getattr(arg, '__name__', '')
-                                for arg in args])
+                                  for arg in args])
                 field += f"[{args}]"
 
         if options.default is not None and options.default is not PydanticUndefined:
@@ -340,5 +341,6 @@ def _stringify_pydantic(cls: Optional[type[Model]], indent=0) -> Optional[str]:
         fields.append(field)
 
     return ('\n' + ' ' * indent).join(fields)
+
 
 __all__ = ['Extension', 'Model', 'Sources', 'max_jobs']

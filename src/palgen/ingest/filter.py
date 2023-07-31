@@ -7,7 +7,7 @@ from typing import Any, Iterable, Optional
 
 
 class Filter:
-    needles: list[str | re.Pattern[str]]
+    __slots__ = ('needles',)
 
     def __init__(self, *needles: str | re.Pattern[str], regex: bool = False, unix: bool = False) -> None:
         """ Generic filter
@@ -87,6 +87,8 @@ class Filter:
 
 
 class Pattern(Filter):
+    __slots__ = ()
+
     def __init__(self, *patterns: str | re.Pattern[str], unix: bool = False) -> None:
         """ Filter by regex or unix pattern. Equivalent to Filter(..., regex=True)
 
@@ -98,6 +100,8 @@ class Pattern(Filter):
 
 
 class Folder(Filter):
+    __slots__ = ()
+
     def filter(self, files: Iterable[Path]) -> Iterable[Path]:
         """Filters by folder name. This will match folder names at any level
 
@@ -113,6 +117,8 @@ class Folder(Filter):
 
 
 class Suffix(Filter):
+    __slots__ = ()
+
     def filter(self, files: Iterable[Path]) -> Iterable[Path]:
         """Filters by suffix with leading dot. Unlike Python's default behavior this
         concatenates all suffixes.
@@ -134,6 +140,8 @@ class Suffix(Filter):
 
 
 class Suffixes(Filter):
+    __slots__ = ('position',)
+
     def __init__(self, *needles: str | re.Pattern[str], regex: bool = False,
                  unix: bool = False, position: Optional[int] = None) -> None:
         """ Multiple suffixes filter
@@ -170,6 +178,8 @@ class Suffixes(Filter):
 
 
 class Stem(Filter):
+    __slots__ = ()
+
     def filter(self, files: Iterable[Path]) -> Iterable[Path]:
         """Filters by stem (file's name without extension(s))
         ie the stem of `foobar.tar.gz` is `foobar`
@@ -184,6 +194,8 @@ class Stem(Filter):
 
 
 class Name(Filter):
+    __slots__ = ()
+
     def filter(self, files: Iterable[Path]) -> Iterable[Path]:
         """Filters by name
 

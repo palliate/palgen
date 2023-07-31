@@ -9,6 +9,8 @@ import colorama
 class LogFormatter(logging.Formatter):
     """Custom log formatter"""
 
+    __slots__ = ('formatters',)
+
     colors = {
         logging.DEBUG:    "\033[36m",
         logging.INFO:     "\033[32m",

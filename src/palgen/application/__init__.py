@@ -1,5 +1,5 @@
 from .log import set_min_level, setup_logger
-from .palgen import Palgen
+from ..palgen import Palgen
 from .runner import check_direct_run, main
 
 __all__ = ['main', 'check_direct_run',

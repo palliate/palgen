@@ -3,11 +3,6 @@ import sys
 import pytest
 
 
-@pytest.fixture(scope="session")
-def mock_fixture():
-    yield None
-
-
 @pytest.fixture
 def capture_stdout(monkeypatch):
     ret = {"buffer": "", "calls": 0}

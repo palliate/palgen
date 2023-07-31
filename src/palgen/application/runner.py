@@ -17,10 +17,8 @@ from ..ext import Extension
 from ..loaders import AST, Python
 from ..machinery import find_backwards
 from .log import set_min_level
-from .palgen import Palgen
+from ..palgen import Palgen
 from .util import ListParam, pydantic_to_click
-
-_logger = logging.getLogger(__name__)
 
 
 def init_context(ctx, config: str | Path = Path.cwd()):

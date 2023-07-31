@@ -5,10 +5,10 @@ from typing import Iterable, Optional, Type
 
 import toml
 
-from ..ext import Extension
-from ..loaders import Manifest, Python
-from ..machinery.filesystem import discover, gitignore
-from ..schemas import PalgenSettings, ProjectSettings, RootSettings
+from .ext import Extension
+from .loaders import Manifest, Python
+from .machinery.filesystem import discover, gitignore
+from .schemas import PalgenSettings, ProjectSettings, RootSettings
 
 _logger = logging.getLogger(__name__)
 
@@ -74,6 +74,9 @@ class Extensions:
 
 
 class Palgen:
+    __slots__ = 'config_path', 'root', 'settings', 'project', 'options', 'output_path'
+    __dict__ = {}
+
     def __init__(self, config_file: str | Path):
         """Palgen application. Loads and verifies config_file
 
@@ -85,16 +88,16 @@ class Palgen:
             FileNotFoundError: Config file does not exist
         """
         # default to `palgen.toml` if no file name is given
-        self.config_file = Path(config_file).resolve()
-        if self.config_file.is_dir():
-            self.config_file /= "palgen.toml"
+        self.config_path = Path(config_file).resolve()
+        if self.config_path.is_dir():
+            self.config_path /= "palgen.toml"
 
-        if not self.config_file.exists():
+        if not self.config_path.exists():
             raise FileNotFoundError("Config file does not exist")
 
-        config = toml.load(self.config_file)
+        self.root = self.config_path.parent
+        config = toml.load(self.config_path)
         self.settings = RootSettings.model_validate(config)
-        self.root = self.config_file.parent
 
         self.project = ProjectSettings.model_validate(self.settings['project'])
         self.options = PalgenSettings.model_validate(self.settings['palgen'])
@@ -105,7 +108,7 @@ class Palgen:
         if self.options.extensions.folders:
             self.options.extensions.folders = self._expand_paths(self.options.extensions.folders)
 
-        self.output = self._path_for(self.options.output) if self.options.output else self.root
+        self.output_path = self._path_for(self.options.output) if self.options.output else self.root
 
     @cached_property
     def files(self) -> list[Path]:
@@ -171,7 +174,7 @@ class Palgen:
             _logger.warning("Extension `%s` not found.", name)
             return []
 
-        extension = self.extensions.runnables[name](self.project, self.root, self.output, settings)
+        extension = self.extensions.runnables[name](self.project, self.root, self.output_path, settings)
 
         _logger.info("Running extension `%s` with %d jobs",
                      extension.name, self.options.jobs or 1)
@@ -209,12 +212,12 @@ class Palgen:
 
     def __eq__(self, other) -> bool:
         if isinstance(other, Path):
-            return self.config_file == other.resolve()
+            return self.config_path == other.resolve()
 
         if isinstance(other, str):
-            return str(self.config_file) == other
+            return str(self.config_path) == other
 
         if isinstance(other, Palgen):
-            return self.config_file == other.config_file
+            return self.config_path == other.config_path
 
         return False
