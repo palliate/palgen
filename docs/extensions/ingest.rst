@@ -52,6 +52,6 @@ The overall pipeline of an extension can be overridden by setting the :code:`pip
 Full example
 -------------
 
-.. literalinclude:: /examples/tutorial/extensions/hello_world.py
+.. literalinclude:: /examples/tutorial/src/embed/embed.py
    :language: Python
    :linenos:

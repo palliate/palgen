@@ -12,7 +12,7 @@ By default, running the :code:`palgen` command without any arguments executes al
 Running a specific extension
 -----------------------------
 
-To run a specific extension, for instance, one named :code:`foobar`, you can use the command :bash:`palgen foobar`. The extension should be defined somewhere within the project's source or extension folders. To run multiple extensions at once, for example, :code:`foo` and :code:`bar`, you can use the compound command :bash:`palgen foo bar`.
+To run a specific extension, for instance, one named :code:`foobar`, you can use the command :code:`palgen foobar`. The extension should be defined somewhere within the project's source or extension folders. To run multiple extensions at once, for example, :code:`foo` and :code:`bar`, you can use the compound command :code:`palgen foo bar`.
 
 Providing additional options
 -----------------------------
@@ -28,13 +28,13 @@ This command executes palgen with debug printing enabled, runs the :code:`foo` e
 Getting help
 ------------------
 
-To learn more about the available extensions and their settings, you can try running :bash:`palgen --help`. If you need help specifically for an extension (ie the :bash:`foo` extension), you can use the command :bash:`palgen foo --help`.
+To learn more about the available extensions and their settings, you can try running :code:`palgen --help`. If you need help specifically for an extension (ie the :code:`foo` extension), you can use the command :code:`palgen foo --help`.
 
 
 Executing the module directly
 ############################################
 
-It is also possible to execute palgen extensions directly using a Python interpreter. For example, you can execute :bash:`python foobar.py` if :code:`foobar.py` contains exactly one palgen extension.
+It is also possible to execute palgen extensions directly using a Python interpreter. For example, you can execute :code:`python foobar.py` if :code:`foobar.py` contains exactly one palgen extension.
 
 .. warning::
    For this to work, ensure that you define only one palgen extension per Python module (that is, file).
