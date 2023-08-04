@@ -1,5 +1,4 @@
 import logging
-import sys
 from abc import abstractmethod
 from pathlib import Path
 from typing import Any, Iterable
@@ -125,10 +124,6 @@ class Toml(Ingest):
         Yields:
             tuple[Path, dict[str, Any]]: Tuple of a path to every ingested file and its content.
         """
-        if sys.version_info.minor >= 11:
-            import tomllib as toml
-        else:
-            import toml  # type: ignore
-
+        import toml
         for path in files:
             yield path, toml.loads(path.read_text())

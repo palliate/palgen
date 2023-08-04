@@ -2,5 +2,4 @@ colorama~=0.4.6
 click~=8.1.6
 pydantic~=2.1.1
 pathspec~=0.11.1
-
-toml~=0.10.2; python_version<"3.11"
+toml~=0.10.2
