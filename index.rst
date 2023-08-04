@@ -18,6 +18,7 @@ Modules
 
    docs/installation
    docs/usage/index
+   docs/extensions/index
    examples/index
    reference/index
    docs/test/index

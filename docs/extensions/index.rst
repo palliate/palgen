@@ -1,9 +1,10 @@
-Usage
+Extensions
 ==================================
 
 .. toctree::
    :maxdepth: 4
 
-   quickstart
+   extensions
    cli
-   action
+   ingest
+   pipelines

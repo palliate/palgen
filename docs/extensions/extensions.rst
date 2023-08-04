@@ -12,16 +12,5 @@ When palgen starts up it traverses the source and extension directories (both or
 
    This additional check is done to reduce the possibility of screwing up everything due to side effects of executing arbitrary Python modules. To further reduce this possibility you should disable :code:`palgen.extensions.inline` and load extensions from :code:`palgen.extensions.folders` only if your project's sources contain other Python files.
 
-Creating your first module
-###########################
 
-To start off create a :code:`palgen.toml` file in your project's root directory. Refer to :ref:`Quickstart` for default :code:`palgen.toml` options.
-
-Create a Python module named :code:`hello_world.py` somewhere within the configured directories scanned for extension lookup.
-
-For now let's write a simple "hello world" command line tool. This does not use any of the pipelines.
-
-.. literalinclude:: /examples/tutorial/extensions/hello_world.py
-   :language: Python
-   :linenos:
-       
+Make sure your extension class inherits from :code:`palgen.ext.Extension`. This is required for palgen to automatically detect extensions.

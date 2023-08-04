@@ -1,9 +1,10 @@
-name: "Install palgen"
+name: "palgen"
 
 inputs:
   conan:
     description: Install the optional conan dependency
     required: false
+    default: 'false'
 
   run:
     description: Run palgen
