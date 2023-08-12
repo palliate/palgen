@@ -1,0 +1,7 @@
+[palgen]
+output = "build"
+
+[project]
+name = "example"
+version = "0.1"
+sources = ["src"]

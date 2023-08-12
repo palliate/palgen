@@ -40,11 +40,15 @@ class CommandLoader(click.Group):
         commands.extend(self.builtins.keys())
 
         if not ctx.obj:
-            init_context(ctx)
+            # ? When running palgen --help, main() will not be called
+            # ? hence the context has not yet been initialized
 
-        if ctx.obj:
-            assert isinstance(ctx.obj, Palgen)
-            commands.extend(ctx.obj.extensions.runnables)
+            # TODO look for arguments in sys.argv to find proper config etc
+
+            ctx.obj = Palgen(Path.cwd())
+
+        assert isinstance(ctx.obj, Palgen)
+        commands.extend(ctx.obj.extensions.runnables)
 
         return commands
 
@@ -117,11 +121,19 @@ class CommandLoader(click.Group):
     def _load_builtin(name):
         with contextlib.suppress(ImportError):
             mod = importlib.import_module(name)
+
+            skip_list = []
+
             for ident, attr in mod.__dict__.items():
                 if ident.startswith('_'):
                     continue
 
                 if isinstance(attr, click.core.Command):
+                    if isinstance(attr, click.core.Group):
+                        skip_list.extend(attr.commands.values())
+                    elif attr in skip_list:
+                        continue
+
                     yield getattr(attr, "name", ident), attr
 
     @staticmethod
@@ -160,7 +172,7 @@ def main(ctx, debug: bool, version: bool, config: Path,
         # logging.getLogger(__package__).setLevel(logging.DEBUG)
         set_min_level(0)
 
-    init_context(ctx, config)
+    ctx.obj = Palgen(config)
 
     assert isinstance(ctx.obj, Palgen)
 
