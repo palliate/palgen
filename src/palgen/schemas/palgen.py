@@ -18,7 +18,6 @@ class ExtensionSettings(BaseModel):
     #toml: bool = False  # not implemented
     python: bool = True
     manifest: bool = True
-
     inline: bool = True
 
 class PalgenSettings(BaseModel):

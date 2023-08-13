@@ -8,26 +8,25 @@ from typing import Iterable, Optional
 
 from ..ext import Extension
 from ..ingest import Suffix
-from ..schemas import ProjectSettings
 from .ast_helper import AST
-from .loader import Loader, LoaderGenerator
+from .loader import Loader, ExtensionInfo, Kind
 
 _logger = logging.getLogger(__name__)
 
 
 class Python(Loader):
-    __slots__ = ('project',)
+    __slots__ = ('project_name',)
 
-    def __init__(self, project: Optional[ProjectSettings] = None):
+    def __init__(self, project_name: Optional[str] = None):
         """Loads palgen extensions from Python modules (that is, files).
 
         Args:
-            project (Optional[ProjectSettings], optional): Project settings used to give extensions
+            project_name (Optional[str], optional): Project name used to give extensions
                 a proper import name. Defaults to None.
         """
-        self.project = project
+        self.project_name = project_name
 
-    def ingest(self, sources: Iterable[Path]) -> LoaderGenerator:
+    def ingest(self, sources: Iterable[Path]) -> Iterable[ExtensionInfo]:
         """Ingests extensions from the given sources. This skips all files not ending in '.py'.
 
         Args:
@@ -40,7 +39,7 @@ class Python(Loader):
         for file in files:
             yield from self.load(file)
 
-    def load(self, path: Path, import_name: Optional[str] = None) -> LoaderGenerator:
+    def load(self, source: Path, import_name: Optional[str] = None) -> Iterable[ExtensionInfo]:
         """Attempt loading palgen extensions from Python module at the given path.
 
         Args:
@@ -50,13 +49,13 @@ class Python(Loader):
         Yields:
             tuple[str, Type[Extension]]: name and class of all discovered palgen extensions
         """
-        if not Python.check_candidate(path):
+        if not Python.check_candidate(source):
             return
 
-        name = import_name or self.get_module_name(path)
+        name = import_name or self.get_module_name(source)
         _logger.debug("Adding to sys.modules: %s", name)
 
-        spec = spec_from_file_location(name, path)
+        spec = spec_from_file_location(name, source)
 
         # file is pre-checked, this assertion should never fail
         assert spec and spec.loader, "Spec could not be loaded"
@@ -68,7 +67,7 @@ class Python(Loader):
 
         except ImportError as exc:
             import traceback
-            _logger.warning("Failed loading %s. Error: %s", path, exc)
+            _logger.warning("Failed loading %s. Error: %s", source, exc)
 
             if _logger.isEnabledFor(logging.DEBUG):
                 traceback.print_exception(exc)
@@ -83,11 +82,10 @@ class Python(Loader):
                 if not isinstance(attr, type) or not issubclass(attr, Extension) or attr is Extension:
                     continue
 
-                attr.module = name
                 _logger.debug("Found extension `%s` (importable from `%s`). Key `%s`",
                             attr.__name__, name, attr.name)
 
-                yield attr.name, attr
+                yield ExtensionInfo(attr, name, source, Kind.PRIVATE)
 
     @staticmethod
     def check_candidate(path: Path) -> bool:
@@ -151,8 +149,8 @@ class Python(Loader):
         """
         module_name: list[str] = ["palgen", "ext"]
 
-        if self.project is not None:
-            module_name.append(self.project.name)
+        if self.project_name is not None:
+            module_name.append(self.project_name)
 
             if (probe := path.parent / '__init__.py').exists():
                 module_name.append(Python.get_parent_name(probe))

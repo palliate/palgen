@@ -31,4 +31,9 @@ def generate_manifest(conan_file: ConanFile):
 
     save(conan_file, "palgen.cache", toml.dumps(amalgamated))
 
+    if not (config_file := conan_file.source_path / 'palgen.toml').exists():
+        logging.warning('No palgen config found. Did you forget to add "palgen.toml" to exports_sources?')
+
+    palgen = Palgen(config_file)
+    print(palgen.extensions.manifest())
     logging.info("Written build manifest.")

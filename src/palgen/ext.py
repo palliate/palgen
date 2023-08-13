@@ -38,10 +38,6 @@ class Extension:
     pipeline: Sources | dict[str, Sources] | None  # Overall extension pipeline.
     # Override this if you want to disable all default steps
 
-    # set by the loader
-    module: str        # full module name
-    module_path: Path  # path to this module
-
     __slots__ = ('root_path', 'out_path', 'project', 'settings')
 
     def transform(self, data: Iterable[tuple[Path, Any]]) -> Iterable[tuple[Path, Any]]:
@@ -165,8 +161,6 @@ class Extension:
 
         return f"""\
 Name:        {cls.name}
-Module:      {cls.module}
-Private:     {cls.private}
 Description: {description}
 
 Options:     {_stringify_pydantic(cls.Settings, 13) or "No options"}
