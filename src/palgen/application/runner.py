@@ -10,6 +10,8 @@ import click
 from click.core import Context
 from click.formatting import HelpFormatter
 
+from palgen.schemas.palgen import PalgenSettings
+
 from ..ext import Extension
 from ..loaders import AST, Python
 from ..machinery import find_backwards
@@ -34,7 +36,17 @@ class CommandLoader(click.Group):
             # ? When running palgen --help, main() will not be called
             # ? hence the context has not yet been initialized
 
-            ctx.obj = Palgen(config_file=Path(parsed['config']).resolve())
+            if options.get('debug', False):
+                set_min_level(0)
+
+            settings = PalgenSettings()
+            settings.jobs = int(options.get('jobs', 1))
+
+            conv = ListParam[Path]()
+            settings.extensions.dependencies = conv.convert(options.get('dependencies', []))
+            settings.extensions.folders = conv.convert(options.get('extra_folders', []))
+
+            ctx.obj = Palgen(config_file=Path(parsed['config']).resolve(), settings=settings)
 
     def list_commands(self, ctx: click.Context) -> list[str]:
         commands = super().list_commands(ctx)
@@ -118,7 +130,6 @@ class CommandLoader(click.Group):
 def main(ctx, debug: bool, version: bool, config: Path,
          extra_folders: ListParam[Path], dependencies: ListParam[Path], jobs: int):
     # pylint: disable=too-many-arguments
-    print("MAIN")
     if version:
         from palgen import __version__
         print(f"palgen {__version__}")

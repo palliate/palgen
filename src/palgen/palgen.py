@@ -2,12 +2,11 @@ import logging
 from collections import UserDict
 from functools import cached_property
 from pathlib import Path
-from typing import Iterable, Optional, Type
+from typing import Iterable, Mapping, MutableMapping, Optional, Type
 
 import click
 import toml
 from pydantic import BaseModel, RootModel, ValidationError
-
 from .application.util import pydantic_to_click
 from .ext import Extension
 from .loaders import Builtin, ExtensionInfo, Kind, Loader, Manifest, Python
@@ -33,38 +32,64 @@ class Extensions(UserDict[str, ExtensionInfo]):
 
     @property
     def runnable(self) -> dict[str, ExtensionInfo]:
-        """Returns all runnable extensions.
+        """Get all runnable extensions.
         Runnable extensions are all private and public extensions, including inherited ones.
 
         Returns:
-            dict[str, Type[Extension]]: Runnable extensions
+            dict[str, Type[Extension]]: A dictionary of runnable extensions
         """
         return self.data
 
     @property
     def exportable(self) -> dict[str, ExtensionInfo]:
-        """Returns all exportable extensions.
-        Exportable extensions are all public extensions. Private and inherited ones are not exportable.
+        """Get all exportable extensions.
+        Exportable extensions are public extensions. Private and inherited ones are not exportable.
 
         Returns:
-            dict[str, Type[Extension]]: Exportable extensions
+            dict[str, Type[Extension]]: A dictionary of exportable extensions
         """
         return {k: v for k, v in self.items() if v.kind == Kind.PUBLIC and not v.inherited}
 
     @property
     def builtin(self) -> dict[str, ExtensionInfo]:
+        """Get all built-in extensions.
+
+        Returns:
+            dict[str, ExtensionInfo]: A dictionary of built-in extensions.
+        """
         return {k: v for k, v in self.items() if v.kind == Kind.BUILTIN}
 
     @property
     def private(self) -> dict[str, ExtensionInfo]:
+        """Get all private extensions.
+
+        Private extensions are not accessible externally and are not inherited.
+
+        Returns:
+            dict[str, ExtensionInfo]: A dictionary of private extensions.
+        """
         return {k: v for k, v in self.items() if v.kind == Kind.PRIVATE}
 
     @property
     def inherited(self) -> dict[str, ExtensionInfo]:
+        """Get all inherited extensions.
+
+        Inherited extensions are those inherited from parent classes.
+
+        Returns:
+            dict[str, ExtensionInfo]: A dictionary of inherited extensions.
+        """
         return {k: v for k, v in self.items() if v.inherited}
 
     @property
     def local(self) -> dict[str, ExtensionInfo]:
+        """Get all local extensions.
+
+        Local extensions are those defined in the current project, excluding inherited and built-in ones.
+
+        Returns:
+            dict[str, ExtensionInfo]: A dictionary of local extensions.
+        """
         return {k: v for k, v in self.items() if not v.inherited and v.kind != Kind.BUILTIN}
 
     def manifest(self, relative_to: Optional[Path] = None) -> str:
@@ -89,7 +114,7 @@ class Palgen:
     __slots__ = 'config_path', 'root', 'settings', 'project', 'options', 'output_path'
     __dict__ = {}
 
-    def __init__(self, config_file: str | Path):
+    def __init__(self, config_file: str | Path, settings: Optional[PalgenSettings] = None):
         """Palgen application. Loads and verifies config_file
 
         Args:
@@ -99,6 +124,20 @@ class Palgen:
             ValidationError:   Incorrect or missing project configuration
             FileNotFoundError: Config file does not exist
         """
+
+        def merge(source: Mapping, target: MutableMapping) -> MutableMapping:
+            for key, value in source.items():
+                if key in target and isinstance(target[key], dict) and isinstance(value, dict):
+                    target[key] = merge(target[key], value)
+                elif key in target and isinstance(target[key], list) and isinstance(value, list):
+                    target[key].extend(value)
+                elif key in target and isinstance(target[key], set) and isinstance(value, set):
+                    assert isinstance(target[key], set)
+                    target[key].update(value)
+                else:
+                    target[key] = value
+            return target
+
         # default to `palgen.toml` if no file name is given
         self.config_path = Path(config_file).resolve()
         if self.config_path.is_dir():
@@ -112,11 +151,13 @@ class Palgen:
         self.settings = RootSettings.model_validate(config)
 
         self.project = ProjectSettings.model_validate(self.settings['project'])
+
+        if settings:
+            merge(settings.model_dump(), self.settings['palgen'])
         self.options = PalgenSettings.model_validate(self.settings['palgen'])
 
-        self._expand_paths(self.project.sources)
-        self._expand_paths(self.options.extensions.folders)
-
+        self.project.sources = self._expand_paths(self.project.sources)
+        self.options.extensions.folders = self._expand_paths(self.options.extensions.folders)
         self.output_path = self._path_for(self.options.output) if self.options.output else self.root
 
     @cached_property
