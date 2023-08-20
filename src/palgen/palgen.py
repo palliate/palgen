@@ -111,8 +111,7 @@ class Extensions(UserDict[str, ExtensionInfo]):
 
 
 class Palgen:
-    __slots__ = 'config_path', 'root', 'settings', 'project', 'options', 'output_path'
-    __dict__ = {}
+    __slots__ = '__dict__', 'config_path', 'root', 'settings', 'project', 'options', 'output_path'
 
     def __init__(self, config_file: str | Path, settings: Optional[PalgenSettings] = None):
         """Palgen application. Loads and verifies config_file
@@ -185,6 +184,7 @@ class Palgen:
         """
         _extensions = Extensions()
         extension_settings = self.options.extensions
+
         extension_paths = discover(extension_settings.folders, gitignore(self.root), jobs=1)
 
         loaders: list[Loader] = []
@@ -204,7 +204,6 @@ class Palgen:
                 _extensions.extend(loader, extension_settings.dependencies, inherited=True)
 
         _extensions.extend(Builtin(), ["palgen.application.commands", "palgen.integrations"])
-
         return _extensions
 
     def get_command(self, command: str | ExtensionInfo) -> Optional[click.Group | click.Command]:

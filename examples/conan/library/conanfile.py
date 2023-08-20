@@ -1,5 +1,6 @@
 from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
+from conan.tools.files import copy
 
 
 class examplelibRecipe(ConanFile):
@@ -39,14 +40,20 @@ class examplelibRecipe(ConanFile):
         tc = CMakeToolchain(self)
         tc.generate()
 
+        from palgen.integrations.conan import generate_manifest
+        generate_manifest(self)
+
     def build(self):
         cmake = CMake(self)
         cmake.configure()
         cmake.build()
 
+        copy(self, "generators/palgen.manifest", self.build_folder, self.package_folder, keep_path=False)
+
     def package(self):
         cmake = CMake(self)
         cmake.install()
+
 
     def package_info(self):
         self.cpp_info.libs = ["examplelib"]

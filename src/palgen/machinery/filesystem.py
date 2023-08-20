@@ -53,6 +53,7 @@ def walk(path: Path, ignores: PathSpec = PathSpec([]), jobs: Optional[int] = Non
             for new_tasks, new_output in ret:
                 tasks.extend(new_tasks)
                 output.extend(new_output)
+
         return output
 
 

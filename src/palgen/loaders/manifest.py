@@ -5,6 +5,7 @@ from typing import Iterable
 import toml
 from pydantic import RootModel
 
+from ..ingest.filter import Suffix
 from .loader import Loader, ExtensionInfo
 from .python import Python
 
@@ -37,14 +38,9 @@ class Manifest(Loader):
             tuple[str, Type[Extension]]: name and class of all discovered palgen extensions
         """
 
-        for source in sources:
+        for source in Suffix(".manifest", ".cache")(sources):
             assert isinstance(source, Path)
-
-            if not source.is_dir():
-                continue
-
-            for path in source.glob('**/palgen.manifest'):
-                yield from self.load(Path(path))
+            yield from self.load(source)
 
     def load(self, source: Path) -> Iterable[ExtensionInfo]:
         """Attempt loading palgen extensions from manifest at the given path.

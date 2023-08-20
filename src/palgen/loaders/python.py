@@ -75,7 +75,7 @@ class Python(Loader):
         else:
             for attr_name in dir(module):
                 if attr_name.startswith('_'):
-                    # ignore "private" extensions
+                    # ignore "private" modules
                     continue
 
                 attr = getattr(module, attr_name)
@@ -85,7 +85,9 @@ class Python(Loader):
                 _logger.debug("Found extension `%s` (importable from `%s`). Key `%s`",
                             attr.__name__, name, attr.name)
 
-                yield ExtensionInfo(attr, name, source, Kind.PRIVATE)
+                #TODO check other ways extension could be set to private
+                #TODO fix extension name
+                yield ExtensionInfo(attr, name, source, Kind.PRIVATE if attr.private else Kind.PUBLIC)
 
     @staticmethod
     def check_candidate(path: Path) -> bool:
