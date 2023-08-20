@@ -51,18 +51,18 @@ class Python(Loader):
         """
         if not Python.check_candidate(source):
             return
+        module_name = import_name or self.get_module_name(source)
+        import_name = '.'.join(["palgen.ext", module_name])
+        _logger.debug("Adding to sys.modules: %s", import_name)
 
-        name = import_name or self.get_module_name(source)
-        _logger.debug("Adding to sys.modules: %s", name)
-
-        spec = spec_from_file_location(name, source)
+        spec = spec_from_file_location(import_name, source)
 
         # file is pre-checked, this assertion should never fail
         assert spec and spec.loader, "Spec could not be loaded"
 
         try:
             module = module_from_spec(spec)
-            sys.modules[name] = module
+            sys.modules[import_name] = module
             spec.loader.exec_module(module)
 
         except ImportError as exc:
@@ -83,11 +83,10 @@ class Python(Loader):
                     continue
 
                 _logger.debug("Found extension `%s` (importable from `%s`). Key `%s`",
-                            attr.__name__, name, attr.name)
+                            attr.__name__, import_name, attr.name)
 
                 #TODO check other ways extension could be set to private
-                #TODO fix extension name
-                yield ExtensionInfo(attr, name, source, Kind.PRIVATE if attr.private else Kind.PUBLIC)
+                yield ExtensionInfo(attr, module_name, source, Kind.PRIVATE if attr.private else Kind.PUBLIC)
 
     @staticmethod
     def check_candidate(path: Path) -> bool:
@@ -149,7 +148,7 @@ class Python(Loader):
         Returns:
             str: qualified name of the module
         """
-        module_name: list[str] = ["palgen", "ext"]
+        module_name: list[str] = []
 
         if self.project_name is not None:
             module_name.append(self.project_name)

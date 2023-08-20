@@ -25,6 +25,9 @@ class ExtensionInfo:
 
     @property
     def name(self) -> str:
+        if self.inherited:
+            return self.module
+
         assert self.extension.name is not None, f"NO NAME: {self.extension}"
         return self.extension.name
 

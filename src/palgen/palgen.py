@@ -216,10 +216,11 @@ class Palgen:
         if isinstance(command.extension, (click.Group, click.Command)):
             return command.extension
 
-        return getattr(command.extension, "cli", self._generate_cli(command.extension))
+        return getattr(command.extension, "cli", self._generate_cli(command))
 
-    def _generate_cli(self, extension: Type[Extension]) -> click.Command:
-        key = extension.name
+    def _generate_cli(self, extension_info: ExtensionInfo) -> click.Command:
+        key = extension_info.name
+        extension = extension_info.extension
 
         @click.command(name=key,
                        help=extension.__doc__,

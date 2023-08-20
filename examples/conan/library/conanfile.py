@@ -8,19 +8,11 @@ class examplelibRecipe(ConanFile):
     version = "0.1"
     package_type = "library"
 
-    # Optional metadata
-    license = "<Put the package license here>"
-    author = "<Put your name here> <And your email here>"
-    url = "<Package recipe repository url here, for issues about the package>"
-    description = "<Description of examplelib package here>"
-    topics = ("<Put some tag here>", "<here>", "<and here>")
-
-    # Binary configuration
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
 
-    # Sources are located in the same place as this recipe, copy them to the recipe
+    # do not forget to export `palgen.toml`
     exports_sources = "CMakeLists.txt", "src/*", "include/*", "palgen.toml"
 
     def config_options(self):
@@ -40,6 +32,7 @@ class examplelibRecipe(ConanFile):
         tc = CMakeToolchain(self)
         tc.generate()
 
+        # instead of requiring the global `palgen` generator you can call it manually like this
         from palgen.integrations.conan import generate_manifest
         generate_manifest(self)
 
@@ -48,6 +41,8 @@ class examplelibRecipe(ConanFile):
         cmake.configure()
         cmake.build()
 
+        # copy the generated manifest to the package folder's root, otherwise it will not be found by dependents
+        # This is a workaround. Unfortunately this recipe's package_folder is None during the generate() step
         copy(self, "generators/palgen.manifest", self.build_folder, self.package_folder, keep_path=False)
 
     def package(self):
