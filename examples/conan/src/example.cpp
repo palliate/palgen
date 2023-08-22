@@ -2,10 +2,7 @@
 #include "example.h"
 
 
-
 void example(){
-    
-
     #ifdef NDEBUG
     std::cout << "example/0.1: Hello World Release!\n";
     #else
@@ -113,8 +110,12 @@ void example(){
     #endif
 }
 
-void example_print_vector(const std::vector<std::string> &strings) {
-    for(std::vector<std::string>::const_iterator it = strings.begin(); it != strings.end(); ++it) {
-        std::cout << "example/0.1 " << *it << std::endl;
+auto get_number(bool fail) -> std::expected<int, std::error_code>{
+    if (fail) {
+        return std::unexpected(Error::Application::Custom);
     }
+    return 7;
+}
+auto increment(int x) -> std::expected<int, std::error_code>{
+    return x + 1;
 }

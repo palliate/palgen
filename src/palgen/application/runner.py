@@ -126,9 +126,11 @@ class CommandLoader(click.Group):
               default=Path.cwd() / "palgen.toml")
 @click.option("--extra-folders", default=[], type=ListParam[Path]())
 @click.option("--dependencies", default=[], type=ListParam[Path]())
+@click.option("--output", help="Output path", default=Path("build"), type=Path)
 @click.pass_context
 def main(ctx, debug: bool, version: bool, config: Path,
-         extra_folders: ListParam[Path], dependencies: ListParam[Path], jobs: int):
+         extra_folders: ListParam[Path], dependencies: ListParam[Path],
+         jobs: int, output: Path):
     # pylint: disable=too-many-arguments
     if version:
         from palgen import __version__
@@ -142,17 +144,15 @@ def main(ctx, debug: bool, version: bool, config: Path,
     if isinstance(ctx.obj, Palgen):
         return
 
-    ctx.obj = Palgen(config)
-
-    # override options
+    settings = PalgenSettings()
     if jobs is not None:
-        ctx.obj.options.jobs = jobs
+        settings.jobs = jobs
+    settings.output = output
 
-    if extra_folders:
-        ctx.obj.options.extensions.folders.extend(extra_folders)
+    settings.extensions.folders = list(extra_folders)
+    settings.extensions.dependencies = list(dependencies)
 
-    if dependencies:
-        ctx.obj.options.extensions.dependencies = list(dependencies)
+    ctx.obj = Palgen(config, settings)
 
     if ctx.invoked_subcommand is None:
         assert isinstance(ctx.obj, Palgen)

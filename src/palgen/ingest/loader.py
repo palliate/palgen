@@ -126,4 +126,8 @@ class Toml(Ingest):
         """
         import toml
         for path in files:
-            yield path, toml.loads(path.read_text())
+            try:
+                yield path, toml.loads(path.read_text())
+            except toml.TomlDecodeError as exc:
+                _logger.warning("Could not load %s", path)
+                _logger.warning("Reason: %s", exc.msg)

@@ -13,11 +13,11 @@ macro(palgen_setup)
     include(${CMAKE_BINARY_DIR}/palgen_info.cmake)
 endmacro()
 
-function(palgen_run target)
+function(palgen_run target output_path)  
     add_custom_target(
         "palgen_${target}"
         ALL
-        COMMAND palgen --dependencies "\"${CMAKE_BINARY_DIR}/palgen.cache\""
+        COMMAND palgen --debug --output ${output_path} --dependencies "\"${CMAKE_BINARY_DIR}/palgen.cache\""
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     )
 

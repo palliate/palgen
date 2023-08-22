@@ -1,13 +1,31 @@
 cmake_minimum_required(VERSION 3.15)
-project(examplelib CXX)
+
+if(NOT EXISTS ${CMAKE_BINARY_DIR}/palgen.cmake)
+    message(STATUS "palgen: CMake helper not found, generating.")
+    execute_process(
+        COMMAND palgen cmake --outpath ${CMAKE_BINARY_DIR} --toolchain
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        RESULT_VARIABLE palgen_setup_ret)
+
+    if(palgen_setup_ret AND NOT palgen_setup_ret EQUAL 0)
+        message(FATAL_ERROR "Generating cmake helper failed (${palgen_setup_ret}). Is palgen installed?")
+    endif()
+endif()
+
+include(${CMAKE_BINARY_DIR}/palgen.cmake)
+palgen_setup()
+
+project(
+  ${TARGET}
+  VERSION "${TARGET_VERSION}"
+  LANGUAGES CXX)
 
 
+add_library(${TARGET} src/examplelib.cpp src/demo.cpp)
+set_property(TARGET ${TARGET} PROPERTY CXX_STANDARD 23)
 
+palgen_run(${TARGET} ${CMAKE_SOURCE_DIR})
 
-add_library(examplelib src/examplelib.cpp)
-target_include_directories(examplelib PUBLIC include)
+target_include_directories(${TARGET} PUBLIC include ${CMAKE_BINARY_DIR}/include)
 
-
-
-set_target_properties(examplelib PROPERTIES PUBLIC_HEADER "include/examplelib.h")
-install(TARGETS examplelib)
+install(TARGETS ${TARGET})

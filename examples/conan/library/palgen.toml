@@ -5,3 +5,5 @@ output = "build"
 name = "examplelib"
 version = "0.1"
 sources = ["src", "include"]
+
+[error]

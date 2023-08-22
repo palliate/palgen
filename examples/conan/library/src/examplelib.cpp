@@ -1,6 +1,5 @@
+#include "examplelib/examplelib.h"
 #include <iostream>
-#include "examplelib.h"
-
 
 
 void examplelib(){
@@ -111,10 +110,4 @@ void examplelib(){
     #if __CYGWIN__
     std::cout << "  examplelib/0.1: __CYGWIN__" << __CYGWIN__<< "\n";
     #endif
-}
-
-void examplelib_print_vector(const std::vector<std::string> &strings) {
-    for(std::vector<std::string>::const_iterator it = strings.begin(); it != strings.end(); ++it) {
-        std::cout << "examplelib/0.1 " << *it << std::endl;
-    }
 }

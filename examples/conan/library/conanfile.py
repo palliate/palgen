@@ -43,7 +43,7 @@ class examplelibRecipe(ConanFile):
 
         # copy the generated manifest to the package folder's root, otherwise it will not be found by dependents
         # This is a workaround. Unfortunately this recipe's package_folder is None during the generate() step
-        copy(self, "generators/palgen.manifest", self.build_folder, self.package_folder, keep_path=False)
+        copy(self, "palgen.manifest", self.build_folder, self.package_folder, keep_path=False)
 
     def package(self):
         cmake = CMake(self)

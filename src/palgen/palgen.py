@@ -2,13 +2,12 @@ import logging
 from collections import UserDict
 from functools import cached_property
 from pathlib import Path
-from typing import Iterable, Mapping, MutableMapping, Optional, Type
+from typing import Any, Iterable, Mapping, MutableMapping, Optional
 
 import click
 import toml
 from pydantic import BaseModel, RootModel, ValidationError
 from .application.util import pydantic_to_click
-from .ext import Extension
 from .loaders import Builtin, ExtensionInfo, Kind, Loader, Manifest, Python
 from .machinery.filesystem import discover, gitignore
 from .schemas import PalgenSettings, ProjectSettings, RootSettings
@@ -204,6 +203,23 @@ class Palgen:
                 _extensions.extend(loader, extension_settings.dependencies, inherited=True)
 
         _extensions.extend(Builtin(), ["palgen.application.commands", "palgen.integrations"])
+
+        # WORKAROUND flatten nested settings for dependencies
+        settings: dict[Any, Any] = self.settings.root
+
+        for extension in _extensions.inherited:
+            package, command = extension.split('.', 1)
+            if package not in settings:
+                continue
+
+            assert isinstance(settings[package], dict)
+
+            if (setting := settings[package].pop(command, None)) is not None:
+                settings[extension] = setting
+
+            if not settings[package]:
+                del settings[package]
+
         return _extensions
 
     def get_command(self, command: str | ExtensionInfo) -> Optional[click.Group | click.Command]:

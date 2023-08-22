@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-set(CMAKE_VERBOSE_MAKEFILE ON)
+
 if(NOT EXISTS ${CMAKE_BINARY_DIR}/palgen.cmake)
     message(STATUS "palgen: CMake helper not found, generating.")
     execute_process(
