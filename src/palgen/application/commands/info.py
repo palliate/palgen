@@ -13,7 +13,7 @@ def info(obj: Palgen, extension: str):
     assert isinstance(obj, Palgen)
 
     if extension is not None:
-        mod = obj.extensions.runnables[extension]
+        mod = obj.extensions.runnable[extension].extension
         print(mod.to_string())
         return
 
@@ -29,10 +29,8 @@ Extension paths: {', '.join(str(f) for f in obj.options.extensions.folders)}
 Dependencies:    {', '.join(str(d) for d in obj.options.extensions.dependencies)}
 
 Extensions:
-   Runnable:    {', '.join(obj.extensions.runnables)}
-   Exportable:  {', '.join(obj.extensions.runnables)}
-
-   Public:      {', '.join(obj.extensions.public)}
+   Runnable:    {', '.join(obj.extensions.runnable)}
+   Exportable:  {', '.join(obj.extensions.runnable)}
    Private:     {', '.join(obj.extensions.private)}
 """
     print(text)

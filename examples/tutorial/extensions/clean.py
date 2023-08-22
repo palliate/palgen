@@ -1,5 +1,5 @@
 import shutil
-from palgen.ext import Extension, max_jobs
+from palgen import Extension, max_jobs
 
 class Clean(Extension):
 

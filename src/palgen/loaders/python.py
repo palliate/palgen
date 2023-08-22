@@ -6,28 +6,27 @@ from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from typing import Iterable, Optional
 
-from ..ext import Extension
+from ..interface import Extension
 from ..ingest import Suffix
-from ..schemas import ProjectSettings
 from .ast_helper import AST
-from .loader import Loader, LoaderGenerator
+from .loader import Loader, ExtensionInfo, Kind
 
 _logger = logging.getLogger(__name__)
 
 
 class Python(Loader):
-    __slots__ = ('project',)
+    __slots__ = ('project_name',)
 
-    def __init__(self, project: Optional[ProjectSettings] = None):
+    def __init__(self, project_name: Optional[str] = None):
         """Loads palgen extensions from Python modules (that is, files).
 
         Args:
-            project (Optional[ProjectSettings], optional): Project settings used to give extensions
+            project_name (Optional[str], optional): Project name used to give extensions
                 a proper import name. Defaults to None.
         """
-        self.project = project
+        self.project_name = project_name
 
-    def ingest(self, sources: Iterable[Path]) -> LoaderGenerator:
+    def ingest(self, sources: Iterable[Path]) -> Iterable[ExtensionInfo]:
         """Ingests extensions from the given sources. This skips all files not ending in '.py'.
 
         Args:
@@ -40,7 +39,7 @@ class Python(Loader):
         for file in files:
             yield from self.load(file)
 
-    def load(self, path: Path, import_name: Optional[str] = None) -> LoaderGenerator:
+    def load(self, source: Path, import_name: Optional[str] = None) -> Iterable[ExtensionInfo]:
         """Attempt loading palgen extensions from Python module at the given path.
 
         Args:
@@ -50,25 +49,31 @@ class Python(Loader):
         Yields:
             tuple[str, Type[Extension]]: name and class of all discovered palgen extensions
         """
-        if not Python.check_candidate(path):
+        if not Python.check_candidate(source):
             return
+        module_name = import_name
 
-        name = import_name or self.get_module_name(path)
-        _logger.debug("Adding to sys.modules: %s", name)
+        private = False
+        if not module_name:
+            private, module_name = self.get_module(source)
 
-        spec = spec_from_file_location(name, path)
+        import_name = '.'.join(["palgen.ext", module_name])
+        spec = spec_from_file_location(import_name, source)
 
         # file is pre-checked, this assertion should never fail
         assert spec and spec.loader, "Spec could not be loaded"
 
         try:
+            _logger.debug("Adding to sys.modules: %s", import_name)
+            # TODO set parents as well
+
             module = module_from_spec(spec)
-            sys.modules[name] = module
+            sys.modules[import_name] = module
             spec.loader.exec_module(module)
 
         except ImportError as exc:
             import traceback
-            _logger.warning("Failed loading %s. Error: %s", path, exc)
+            _logger.warning("Failed loading %s. Error: %s", source, exc)
 
             if _logger.isEnabledFor(logging.DEBUG):
                 traceback.print_exception(exc)
@@ -76,23 +81,22 @@ class Python(Loader):
         else:
             for attr_name in dir(module):
                 if attr_name.startswith('_'):
-                    # ignore "private" extensions
                     continue
 
                 attr = getattr(module, attr_name)
                 if not isinstance(attr, type) or not issubclass(attr, Extension) or attr is Extension:
                     continue
 
-                attr.module = name
                 _logger.debug("Found extension `%s` (importable from `%s`). Key `%s`",
-                            attr.__name__, name, attr.name)
+                            attr.__name__, import_name, attr.name)
 
-                yield attr.name, attr
+                #TODO check other ways extension could be set to private
+                yield ExtensionInfo(attr, module_name, source, Kind.PRIVATE if attr.private or private else Kind.PUBLIC)
 
     @staticmethod
     def check_candidate(path: Path) -> bool:
         """Analyzes the AST of the Python extension at the given path without executing it.
-        If the AST does not contain any valid subclasses of palgen.ext.Extension the
+        If the AST does not contain any valid subclasses of palgen.Extension the
         Python module will not be deemed a valid candidate for further processing.
 
         Args:
@@ -117,10 +121,10 @@ class Python(Loader):
 
     @staticmethod
     @functools.lru_cache(maxsize=64)
-    def get_parent_name(path: Path) -> str:
-        """Gets the name of the parent module (in terms of Python's import machinery).
+    def get_parent(path: Path) -> tuple[bool, str]:
+        """Gets the name of the parent package (in terms of Python's import machinery).
         The __init__.py will be analyzed without executing the Python module. If it includes
-        a constant named :code:`_PUBLIC` and :code:`_PUBLIC = True` it will randomize the parent module name.
+        a constant named :code:`_PRIVATE` and :code:`_PRIVATE = True` it will randomize the parent module name.
         Otherwise it will use the content of the string constant :code:`_NAME` or fall back to the
         folder's name.
 
@@ -130,15 +134,15 @@ class Python(Loader):
             path (Path): Path to the __init__.py
 
         Returns:
-            str: Parent module name
+            tuple[bool, str]: Whether the package is to be considered private and its name
         """
         ast = AST.load(path)
-        if not ast.constants.get('_PUBLIC', False):
-            return str(uuid.uuid4())
+        if ast.constants.get('_PRIVATE', False):
+            return True, str(uuid.uuid4())
 
-        return ast.constants.get('_NAME', path.parent.name)
+        return False, ast.constants.get('_NAME', path.parent.name)
 
-    def get_module_name(self, path: Path) -> str:
+    def get_module(self, path: Path) -> tuple[bool, str]:
         """Gets the qualified name for the Python module found at path.
         Falls back to a random project name (and therefore a private extension)
         if this loader hasn't been assigned a project yet.
@@ -147,19 +151,21 @@ class Python(Loader):
             path (Path): Path to a Python file.
 
         Returns:
-            str: qualified name of the module
+            tuple[bool, str]: Whether the module is to be considered private and the qualified name of the module
         """
-        module_name: list[str] = ["palgen", "ext"]
+        module_name: list[str] = []
+        private = False
 
-        if self.project is not None:
-            module_name.append(self.project.name)
+        if self.project_name is not None:
+            module_name.append(self.project_name)
 
             if (probe := path.parent / '__init__.py').exists():
-                module_name.append(Python.get_parent_name(probe))
+                private, parent_name = Python.get_parent(probe)
+                module_name.append(parent_name)
 
             module_name.append(path.stem)
         else:
             # no way to avoid conflicts, make this private
             module_name.append(str(uuid.uuid4()))
 
-        return '.'.join(module_name)
+        return private, '.'.join(module_name)

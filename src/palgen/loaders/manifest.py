@@ -1,10 +1,12 @@
 import logging
 from pathlib import Path
+from typing import Iterable
 
 import toml
 from pydantic import RootModel
 
-from .loader import Loader, LoaderGenerator
+from ..ingest.filter import Suffix
+from .loader import Loader, ExtensionInfo
 from .python import Python
 
 _logger = logging.getLogger(__name__)
@@ -26,7 +28,7 @@ class Manifest(Loader):
 
         self.python_loader = Python()
 
-    def ingest(self, sources: list[Path]) -> LoaderGenerator:
+    def ingest(self, sources: Iterable[Path]) -> Iterable[ExtensionInfo]:
         """Searches the given sources for palgen manifests and loads them.
 
         Args:
@@ -36,16 +38,11 @@ class Manifest(Loader):
             tuple[str, Type[Extension]]: name and class of all discovered palgen extensions
         """
 
-        for source in sources:
+        for source in Suffix(".manifest", ".cache")(sources):
             assert isinstance(source, Path)
+            yield from self.load(source)
 
-            if not source.is_dir():
-                continue
-
-            for path in source.glob('**/palgen.manifest'):
-                yield from self.load(Path(path))
-
-    def load(self, path: Path) -> LoaderGenerator:
+    def load(self, source: Path) -> Iterable[ExtensionInfo]:
         """Attempt loading palgen extensions from manifest at the given path.
 
         Args:
@@ -54,17 +51,17 @@ class Manifest(Loader):
         Yields:
             tuple[str, Type[Extension]]: name and class of all discovered palgen extensions
         """
-        if not path.exists():
-            _logger.warning("Could not find %s", path)
+        if not source.exists():
+            _logger.warning("Could not find %s", source)
             return
 
-        file = toml.load(path)
+        file = toml.load(source)
         manifest = ManifestSchema.model_validate(file)
-        _logger.debug("Loading from `%s`", path)
+        _logger.debug("Loading from `%s`", source)
 
         for name, path_str in manifest.items():
-            path = Path(path_str)
-            if not path.is_absolute():
-                path = path.parent / path
+            source = Path(path_str)
+            if not source.is_absolute():
+                source = source.parent / source
 
-            yield from self.python_loader.load(path, import_name=name)
+            yield from self.python_loader.load(source, import_name=name)

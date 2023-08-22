@@ -1,0 +1,81 @@
+#pragma once
+#include <cassert>
+#include <string>
+#include <system_error>
+#include <expected>
+
+namespace @namespace or ""@Error {
+class @name@ : public std::error_category {
+   public:
+    enum Code { 
+      @{- for error_code in error_codes.keys() }
+      @error_code@,
+      @{- endfor }
+      ERRORS_MAXVAL
+    };
+
+    ~@name@() {}
+
+    static char const* c_message(Code code) {
+        switch (code) {
+            @{- for code, message in error_codes.items() }
+            case @code@:
+                return "@message@";
+            @{- endfor }
+            default:
+                return "Invalid error.";
+        }
+    }
+
+    virtual std::string message(int code) const override {
+        assert(code >= 0);
+        assert(code < Code::ERRORS_MAXVAL);
+
+        return c_message(static_cast<Code>(code));
+    }
+
+    virtual char const* name() const noexcept override {
+        return "@name@"; 
+    }
+
+    [[nodiscard]] static error_category const& Instance() {
+        static @name@ const instance;
+        return instance;
+    }
+
+    [[nodiscard]] static std::error_code make(Code code) {
+        return std::error_code(static_cast<int>(code), Instance());
+    }
+};
+inline std::error_code make_error_code(@namespace or ""@Error::@name@::Code code)
+{
+  return @namespace or ""@Error::@name@::make(code);
+}
+};  // namespace @namespace or ""@::Error
+
+template<> 
+struct std::is_error_code_enum<@namespace or ""@Error::@name@::Code> : public std::true_type { };
+
+template <>
+class std::bad_expected_access<@namespace or ""@Error::@name@::Code> : public std::bad_expected_access<void> {
+   public:
+    using Category = @namespace or ""@Error::@name@;
+    using ErrorCode = Category::Code;
+
+    explicit bad_expected_access(ErrorCode error_code) : error_code(error_code) {}
+
+    [[nodiscard]] const char* what() const noexcept override {
+        return std::bad_expected_access<void>::what();
+    }
+
+    [[nodiscard]] std::error_code error() noexcept {
+        return Category::make(error_code);
+    }
+
+    [[nodiscard]] std::error_code error() const noexcept {
+        return Category::make(error_code);
+    }
+
+   private:
+    ErrorCode error_code;
+};

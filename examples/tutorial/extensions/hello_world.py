@@ -1,9 +1,9 @@
 import logging
 from typing import Annotated, Optional
 
-from palgen.ext import Extension, Model
+from palgen import Extension, Model
 
-# extension class must inherit from palgen.ext.Extension
+# extension class must inherit from palgen.Extension
 class HelloWorld(Extension):
     ''' Prints hello world '''
     # a docstring can be used to provide a help text

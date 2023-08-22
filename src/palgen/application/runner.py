@@ -1,50 +1,59 @@
-import contextlib
-import importlib
-import itertools
 import logging
 import os
 import sys
-from functools import cached_property
+from gettext import gettext
 from pathlib import Path
-from pkgutil import walk_packages
 from subprocess import check_call
-from typing import Type
+from typing import Iterable
 
 import click
-from pydantic import BaseModel, RootModel, ValidationError
+from click.core import Context
+from click.formatting import HelpFormatter
 
-from ..ext import Extension
+from palgen.schemas.palgen import PalgenSettings
+
+from ..interface import Extension
 from ..loaders import AST, Python
 from ..machinery import find_backwards
-from .log import set_min_level
 from ..palgen import Palgen
-from .util import ListParam, pydantic_to_click
-
-
-def init_context(ctx, config: str | Path = Path.cwd()):
-    if isinstance(config, str):
-        config = Path(config)
-
-    if config.is_dir():
-        config /= "palgen.toml"
-
-    if not config.exists():
-        raise FileNotFoundError("palgen.toml not found")
-
-    ctx.obj = Palgen(config)
+from .log import set_min_level
+from .util import ListParam
 
 
 class CommandLoader(click.Group):
+    def ensure_palgen(self, ctx: click.Context):
+        args = sys.argv[1:]
+        args.remove("--help")
+
+        parser = ctx.command.make_parser(ctx)
+        options, arguments, _ = parser.parse_args(args)
+        parsed = {parameter.name: parameter.consume_value(ctx, options)[0]
+                  for parameter in ctx.command.get_params(ctx)}
+
+        # TODO if arguments is nonempty print helptext for command
+
+        if ctx.obj is None:
+            # ? When running palgen --help, main() will not be called
+            # ? hence the context has not yet been initialized
+
+            if options.get('debug', False):
+                set_min_level(0)
+
+            settings = PalgenSettings()
+            settings.jobs = int(options.get('jobs', 1))
+
+            conv = ListParam[Path]()
+            settings.extensions.dependencies = conv.convert(options.get('dependencies', []))
+            settings.extensions.folders = conv.convert(options.get('extra_folders', []))
+
+            ctx.obj = Palgen(config_file=Path(parsed['config']).resolve(), settings=settings)
+
     def list_commands(self, ctx: click.Context) -> list[str]:
         commands = super().list_commands(ctx)
-        commands.extend(self.builtins.keys())
 
-        if not ctx.obj:
-            init_context(ctx)
-
-        if ctx.obj:
-            assert isinstance(ctx.obj, Palgen)
-            commands.extend(ctx.obj.extensions.runnables)
+        self.ensure_palgen(ctx)
+        assert isinstance(ctx.obj, Palgen)
+        commands.extend(ctx.obj.extensions.runnable)
 
         return commands
 
@@ -55,88 +64,58 @@ class CommandLoader(click.Group):
             # commands registered to the top level group
             return from_group
 
-        if cmd_name in self.builtins:
-            # built-in commands
-            return self.builtins[cmd_name]
-
         assert isinstance(ctx.obj, Palgen)
-        if cmd_name in ctx.obj.extensions.runnables:
-            extension = ctx.obj.extensions.runnables[cmd_name]
-            return getattr(extension, "cli", CommandLoader.generate_cli(extension, ctx.obj))
+        return ctx.obj.get_command(cmd_name)
 
-        return None
+    def format_commands(self, ctx: Context, formatter: HelpFormatter) -> None:
+        self.ensure_palgen(ctx)
+        palgen: Palgen = ctx.obj
 
-    @staticmethod
-    def generate_cli(extension: Type[Extension], palgen: Palgen):
-        key = extension.name.lower()
-
-        @click.command(name=key,
-                       help=extension.__doc__,
-                       context_settings={'show_default': True})
-        @click.pass_obj
-        def wrapper(obj, **kwargs):
-            nonlocal key
-            obj.run(key, kwargs)
-
-        if key in palgen.settings and extension.Settings is not None:
-            assert issubclass(extension.Settings, (BaseModel, RootModel))
-
-            try:
-                extension.Settings.model_validate(palgen.settings[key])
-            except ValidationError as exc:
-                filtered = [error for error in exc.errors()
-                            if error.get('type', None) != 'missing']
-
-                if filtered:
-                    raise
-
-        for field, options in pydantic_to_click(extension.Settings):
-            if key in palgen.settings and field in palgen.settings[key]:
-                options["required"] = False
-                options["default"] = palgen.settings[key][field]
-            wrapper = click.option(f'--{field}', **options)(wrapper)
-
-        return wrapper
-
-    @cached_property
-    def builtins(self):
-        keys = set()
-        builtins = {}
-        for (name, attr) in itertools.chain(CommandLoader._load_from("palgen.application.commands"),
-                                            CommandLoader._load_from("palgen.integrations")):
-            if name in keys:
-                logging.error(
-                    "Duplicate command name `%s` found, skipping", name)
-                continue
-
-            keys.add(name)
-            builtins[name] = attr
-        return builtins
-
-    @staticmethod
-    def _load_builtin(name):
-        with contextlib.suppress(ImportError):
-            mod = importlib.import_module(name)
-            for ident, attr in mod.__dict__.items():
-                if ident.startswith('_'):
+        def get_commands(extensions: Iterable[str]):
+            nonlocal ctx
+            for name in extensions:
+                cmd = self.get_command(ctx, name)
+                if cmd is None:
                     continue
 
-                if isinstance(attr, click.core.Command):
-                    yield getattr(attr, "name", ident), attr
-
-    @staticmethod
-    def _load_from(name: str):
-        with contextlib.suppress(ImportError):
-            pkg = importlib.import_module(name)
-            for module in walk_packages(path=pkg.__path__, prefix=f"{name}."):
-                if module.ispkg:
+                if cmd.hidden:
                     continue
+                yield name, cmd
 
-                yield from CommandLoader._load_builtin(module.name)
+        def format_section(section: str, extensions: Iterable[str]) -> None:
+            nonlocal formatter
+            commands = list(get_commands(extensions))
+            # allow for 3 times the default spacing
+            if not commands:
+                return
+            limit = formatter.width - 6 - max(len(cmd[0]) for cmd in commands)
+            rows = [(subcommand, cmd.get_short_help_str(limit)) for subcommand, cmd in commands]
 
+            if rows:
+                with formatter.section(section):
+                    formatter.write_dl(rows)
 
-@click.command(cls=CommandLoader, chain=True,
-               invoke_without_command=True, context_settings={'show_default': True})
+        format_section("Built-in Commands", [*super().list_commands(ctx), *palgen.extensions.builtin])
+        format_section(f'{palgen.project.name} Commands', palgen.extensions.local)
+        format_section('Inherited Commands', palgen.extensions.inherited)
+
+    def format_options(self, ctx: Context, formatter: HelpFormatter) -> None:
+        opts = []
+        for param in self.get_params(ctx):
+            rv = param.get_help_record(ctx)
+            if rv is not None:
+                opts.append(rv)
+
+        if opts:
+            with formatter.section(gettext("Options")):
+                formatter.write_dl(opts)
+
+        self.format_commands(ctx, formatter)
+
+@click.command(cls=CommandLoader,
+               chain=True,
+               invoke_without_command=True,
+               context_settings={'show_default': True})
 @click.option('-v', "--version", help="Show palgen version", is_flag=True)
 @click.option('--debug/--no-debug', default=False)
 @click.option('-j', '--jobs',
@@ -147,32 +126,33 @@ class CommandLoader(click.Group):
               default=Path.cwd() / "palgen.toml")
 @click.option("--extra-folders", default=[], type=ListParam[Path]())
 @click.option("--dependencies", default=[], type=ListParam[Path]())
+@click.option("--output", help="Output path", default=Path("build"), type=Path)
 @click.pass_context
 def main(ctx, debug: bool, version: bool, config: Path,
-         extra_folders: ListParam[Path], dependencies: ListParam[Path], jobs: int):
+         extra_folders: ListParam[Path], dependencies: ListParam[Path],
+         jobs: int, output: Path):
     # pylint: disable=too-many-arguments
-
     if version:
         from palgen import __version__
         print(f"palgen {__version__}")
         return
+
     if debug:
         # logging.getLogger(__package__).setLevel(logging.DEBUG)
         set_min_level(0)
 
-    init_context(ctx, config)
+    if isinstance(ctx.obj, Palgen):
+        return
 
-    assert isinstance(ctx.obj, Palgen)
-
-    # override options
+    settings = PalgenSettings()
     if jobs is not None:
-        ctx.obj.options.jobs = jobs
+        settings.jobs = jobs
+    settings.output = output
 
-    if extra_folders:
-        ctx.obj.options.extensions.folders.extend(extra_folders)
+    settings.extensions.folders = list(extra_folders)
+    settings.extensions.dependencies = list(dependencies)
 
-    if dependencies:
-        ctx.obj.options.extensions.dependencies = list(dependencies)
+    ctx.obj = Palgen(config, settings)
 
     if ctx.invoked_subcommand is None:
         assert isinstance(ctx.obj, Palgen)

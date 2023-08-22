@@ -6,7 +6,7 @@ from typing import Any, Iterable
 from palgen.ingest.filter import Suffix, Suffixes, Pattern
 from palgen.ingest.loader import Json
 
-from palgen.ext import Extension, Sources, Model
+from palgen.interface import Extension, Sources, Model
 from palgen.template.jinja import Template
 
 

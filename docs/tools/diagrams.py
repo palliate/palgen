@@ -7,9 +7,8 @@ from typing import Iterable
 from pylint.pyreverse.main import Run
 import pydot
 
-from palgen.ingest.filter import Suffix, Folder
-from palgen.ingest.path import Relative, Absolute
-from palgen.ext import Extension, Sources, max_jobs
+from palgen.ingest import Suffix, Folder, Relative, Absolute
+from palgen import Extension, Sources, max_jobs
 from palgen.loaders.ast_helper import AST
 
 def run_pyreverse(cwd: Path, args):
