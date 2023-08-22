@@ -7,3 +7,4 @@ Usage
    quickstart
    cli
    action
+   settings
