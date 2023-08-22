@@ -6,7 +6,7 @@ from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from typing import Iterable, Optional
 
-from ..ext import Extension
+from ..interface import Extension
 from ..ingest import Suffix
 from .ast_helper import AST
 from .loader import Loader, ExtensionInfo, Kind
@@ -58,14 +58,15 @@ class Python(Loader):
             private, module_name = self.get_module(source)
 
         import_name = '.'.join(["palgen.ext", module_name])
-        _logger.debug("Adding to sys.modules: %s", import_name)
-
         spec = spec_from_file_location(import_name, source)
 
         # file is pre-checked, this assertion should never fail
         assert spec and spec.loader, "Spec could not be loaded"
 
         try:
+            _logger.debug("Adding to sys.modules: %s", import_name)
+            # TODO set parents as well
+
             module = module_from_spec(spec)
             sys.modules[import_name] = module
             spec.loader.exec_module(module)

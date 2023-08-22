@@ -1,6 +1,6 @@
 import logging
 
-from palgen.ext import Extension, Sources
+from palgen import Extension, Sources
 from palgen.ingest import Name, Empty, Relative
 from palgen.schemas import ProjectSettings
 from palgen.template.jinja import Template

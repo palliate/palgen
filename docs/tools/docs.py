@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 from sphinx.cmd.build import build_main
 
-from palgen.ext import Extension
+from palgen import Extension
 
 
 class Docs(Extension):

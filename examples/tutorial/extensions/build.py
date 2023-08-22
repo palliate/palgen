@@ -3,7 +3,7 @@ from pathlib import Path
 from subprocess import check_call
 from typing import Iterable
 
-from palgen.ext import Extension, Sources, Model
+from palgen import Extension, Sources, Model
 from palgen.ingest import Suffixes, Relative
 
 class Build(Extension):

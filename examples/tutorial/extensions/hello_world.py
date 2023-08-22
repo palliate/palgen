@@ -1,7 +1,7 @@
 import logging
 from typing import Annotated, Optional
 
-from palgen.ext import Extension, Model
+from palgen import Extension, Model
 
 # extension class must inherit from palgen.ext.Extension
 class HelloWorld(Extension):

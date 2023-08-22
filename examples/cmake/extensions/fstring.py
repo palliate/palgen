@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Iterable
 
 from palgen.ingest import Suffix, Text, Relative
-from palgen.ext import Extension, Sources
+from palgen import Extension, Sources
 
 
 class FString(Extension):

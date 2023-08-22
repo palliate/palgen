@@ -6,7 +6,7 @@ from typing import Iterable, Type
 
 import click
 
-from ..ext import Extension
+from ..interface import Extension
 
 
 class Kind(Enum):

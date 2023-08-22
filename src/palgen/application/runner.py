@@ -12,7 +12,7 @@ from click.formatting import HelpFormatter
 
 from palgen.schemas.palgen import PalgenSettings
 
-from ..ext import Extension
+from ..interface import Extension
 from ..loaders import AST, Python
 from ..machinery import find_backwards
 from ..palgen import Palgen

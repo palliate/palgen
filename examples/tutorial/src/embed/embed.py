@@ -2,7 +2,7 @@ from hashlib import md5
 from pathlib import Path
 from typing import Iterable
 
-from palgen.ext import Extension, Sources, max_jobs
+from palgen import Extension, Sources, max_jobs
 from palgen.ingest import Suffixes, Relative, Raw
 from palgen.template.string import Template
 

@@ -19,8 +19,8 @@ def test_resolve_module():
     assert module == ['palgen']
     assert name is None
 
-    import palgen.ext
-    module, name = get_import_name(palgen.ext)
+    import palgen.interface
+    module, name = get_import_name(palgen.interface)
     assert module == ['palgen', 'ext']
     assert name is None
 
@@ -32,31 +32,31 @@ def test_resolve_builtin():
 
 
 def test_resolve_bare():
-    import palgen.ext
-    module, name = get_import_name(palgen.ext.Extension)
+    import palgen.interface
+    module, name = get_import_name(palgen.interface.Extension)
     assert module == ['palgen', 'ext']
     assert name == 'Extension'
 
 
 def test_resolve_from():
-    from palgen.ext import Extension
+    from palgen.interface import Extension
     module_name, name = get_import_name(Extension)
     assert module_name == ['palgen', 'ext']
     assert name == 'Extension'
 
-    from palgen import ext
-    module_name, name = get_import_name(ext.Extension)
+    from palgen import interface
+    module_name, name = get_import_name(interface.Extension)
     assert module_name == ['palgen', 'ext']
     assert name == 'Extension'
 
 
 def test_resolve_alias():
-    from palgen.ext import Extension as templ
+    from palgen.interface import Extension as templ
     module_name, name = get_import_name(templ)
     assert module_name == ['palgen', 'ext']
     assert name == 'Extension'
 
-    from palgen import ext as mod
+    from palgen import interface as mod
     module_name, name = get_import_name(mod.Extension)
     assert module_name == ['palgen', 'ext']
     assert name == 'Extension'
@@ -90,7 +90,7 @@ def test_import_relative():
 class TestParametrized:
 
     def test_import(self, import_, symbol):
-        from palgen.ext import Extension
+        from palgen.interface import Extension
         ast = AST.parse(import_)
 
         assert len(ast.imports) == 1
@@ -101,7 +101,7 @@ class TestParametrized:
         assert possible[0] == symbol
 
     def test_class(self, import_, symbol):
-        from palgen.ext import Extension
+        from palgen.interface import Extension
         ast = AST.parse(f"{import_}\nclass Foo({symbol}):\n  ...")
         subclasses = list(ast.get_subclasses(Extension))
 

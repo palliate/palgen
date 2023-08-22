@@ -1,5 +1,6 @@
 import ast
 from functools import singledispatch, singledispatchmethod
+import inspect
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Iterable, Optional
@@ -188,7 +189,7 @@ class AST:
 
             return  # ? implement
 
-        if not isinstance(value, ast.Constant):
+        if isinstance(value, ast.Constant):
             # only care about constant rhs
             # refer to https://docs.python.org/3/library/ast.html#ast.Constant
             # > The values represented can be simple types such as a number, string or None,
@@ -200,28 +201,30 @@ class AST:
             # `...` is included, however `Ellipsis` is not
 
             # ? constant arithmetic expressions could be computed without otherwise evaluating
-            return
+            self.constants[target.id] = value.value
 
-        self.constants[target.id] = value.value
+        elif isinstance(value, (ast.List, ast.Set, ast.Tuple)):
+            # List(expr* elts, expr_context ctx)
+            # Set(expr* elts)
+            # Tuple(expr* elts, expr_context ctx)
 
-    def possible_names(self, base: type) -> Iterable[str]:
-        """Yields all possible symbols referring to the target type.
+            if not all(isinstance(element, ast.Constant) for element in value.elts):
+                # not all elements are constants, skip
+                return
+            self.constants[target.id] = [getattr(element, "value") for element in value.elts]
 
-        Args:
-            base (type): The type of the target
+        elif isinstance(value, ast.Dict):
+            # Dict(expr* keys, expr* values)
 
-        Yields:
-            str: for every possible symbol referring to the target type
-        """
-        module, name = get_import_name(base)
+            if not all(isinstance(element, ast.Constant) for element in [*value.keys, *value.values]):
+                # not all elements are constants, skip
+                return
 
-        assert name, f"Target has no name {base}"
+            keys = [getattr(element, "value") for element in value.keys]
+            values = [getattr(element, "value") for element in value.values]
+            self.constants[target.id] = dict(zip(keys, values))
 
-        if not module:
-            # builtins do not need to be imported
-            yield name
-            return
-
+    def _possible_names(self, module: list[str], name: str):
         for import_ in self.imports:
             assert import_.module is not None, f"Import has no module: {str(import_)}"
             idx = 0
@@ -251,6 +254,37 @@ class AST:
                 elif import_.real_name == name:
                     # from package.module import Class (as alias)
                     yield import_.name
+
+    def possible_names(self, base: type) -> Iterable[str]:
+        """Yields all possible symbols referring to the target type.
+
+        Args:
+            base (type): The type of the target
+
+        Yields:
+            str: for every possible symbol referring to the target type
+        """
+        base_module, name = get_import_name(base)
+        assert name, f"Target has no name {base}"
+
+        if not base_module:
+            # builtins do not need to be imported
+            yield name
+            return
+
+        yield from self._possible_names(base_module, name)
+
+        base_path = Path(inspect.getfile(base))
+        for idx, mod in enumerate(base_module[:-1]):
+            cutoff = len(base_module) - idx - 1
+
+            if (probe := Path(*base_path.parts[:-cutoff], '__init__.py')).exists():
+                init_ast = AST.load(probe)
+                exported = init_ast.constants.get('__all__', [])
+                # TODO check imports for aliases first
+
+                if name in exported:
+                    yield from self._possible_names([*base_module[:idx], mod], name)
 
     def get_subclasses(self, base: type) -> Iterable['Class']:
         """Gets all subclasses of given base type.

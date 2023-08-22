@@ -1,7 +1,6 @@
 from pathlib import Path
-from typing import Iterable
 from pydantic import RootModel
-from palgen.ext import Extension, Sources, Model
+from palgen.interface import Extension, Sources, Model
 from palgen.ingest import Name, Toml
 from palgen.template.jinja import Template
 

@@ -1,4 +1,4 @@
-from palgen.ext import Extension
+from palgen import Extension
 
 class Extension1(Extension):
     def run(self, *_):
