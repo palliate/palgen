@@ -96,7 +96,7 @@ class Python(Loader):
     @staticmethod
     def check_candidate(path: Path) -> bool:
         """Analyzes the AST of the Python extension at the given path without executing it.
-        If the AST does not contain any valid subclasses of palgen.ext.Extension the
+        If the AST does not contain any valid subclasses of palgen.Extension the
         Python module will not be deemed a valid candidate for further processing.
 
         Args:
