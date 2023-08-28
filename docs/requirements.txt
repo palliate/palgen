@@ -8,6 +8,6 @@ sphinx-test-reports~=1.0.2
 sphinx_mdinclude~=0.5.3
 sphinx-immaterial~=0.11.7
 sphinx-git~=11.0.0
-sphinx-click~=4.4.0
+sphinx-click~=5.0.1
 pylint~=2.17.5
 pydot~=1.4.2
