@@ -302,6 +302,9 @@ class Palgen:
         If a extension is not found or isn't runnable it will be skipped.
         """
         generated: list[Path] = []
+        #TODO find a better fix for this
+        self.extensions # force extensions to be discovered. This flattens self.settings
+
         for name, settings in self.settings.items():
             if name not in self.extensions.runnable:
                 if name not in ('palgen', 'project'):

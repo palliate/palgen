@@ -1,5 +1,6 @@
 import inspect
 import logging
+from pathlib import Path, PurePath
 from functools import partial, reduce
 from inspect import isfunction, isgenerator, ismethod, signature
 from multiprocessing import cpu_count
@@ -24,6 +25,9 @@ def get_name(obj):
 
 class PipelineMeta(type):
     __slots__ = ()
+
+    def __truediv__(cls, folder: str):
+        return cls().__truediv__(folder)
 
     def __rshift__(cls, step: Step | Type['Pipeline'] | Any) -> 'Pipeline':
         # sourcery skip: instance-method-first-arg-name
@@ -52,11 +56,16 @@ class Task:
 
 
 class Pipeline(metaclass=PipelineMeta):
-    __slots__ = 'initial_state', 'tasks'
+    __slots__ = 'initial_state', 'tasks', 'path_filters'
 
     def __init__(self, state=None):
         self.initial_state: Optional[Iterable] = state
         self.tasks: list[Task] = [Task()]
+        self.path_filters: list[str] = []
+
+    def __truediv__(self, folder: str) -> 'Pipeline':
+        self.path_filters.append(folder)
+        return self
 
     def __rshift__(self, step: Step | Type['Pipeline'] | Any) -> 'Pipeline':
         if isinstance(step, type):
@@ -80,6 +89,9 @@ class Pipeline(metaclass=PipelineMeta):
             self.tasks.append(Task(max_jobs=max_jobs))
 
         if isinstance(step, Pipeline) and step.initial_state is None:
+            if len(step.path_filters) > len(self.path_filters):
+                self.path_filters = step.path_filters
+
             if not self.tasks[-1]:
                 self.tasks = step.tasks
             else:
@@ -104,8 +116,19 @@ class Pipeline(metaclass=PipelineMeta):
         for task in self.tasks:
             yield from self._run_task(state=state, obj=obj, task=task)
 
+    def filter_paths(self, paths: list[Path]):
+        if not self.path_filters:
+            yield from paths
+            return
+
+        for source in paths:
+            assert isinstance(source, Path)
+            for i in range(1 + len(source.parts) - len(self.path_filters)):
+                if self.path_filters == list(source.parts[i: i+ len(self.path_filters)]):
+                    yield source
+
     def __call__(self, state: list[Any], obj: Any = None, max_jobs: Optional[int] = None):
-        output = state
+        output = list(self.filter_paths(state or self.initial_state))
         for task in self.tasks:
             if not output:
                 break
